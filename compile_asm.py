@@ -26,9 +26,10 @@ for line in objdump("-d", "test.o"):
 
         d = "{:032b}".format(code)[::-1]
 
-        r_type = "_".join((d[0:7], d[7:12], d[12:15], d[15:20], d[20:25], d[25:31]))[::-1]
+        r_type = "_".join((d[0:7], d[7:12], d[12:15], d[15:20], d[20:25], d[25:32]))[::-1]
+        u_type = "_".join((d[0:7], d[7:12], d[12:32]))[::-1]
 
-        print("0x{:x} 0b{} {}".format(offset, r_type, assembly))
+        print("r: 0b{} u: 0b{} {}".format(r_type, u_type, assembly))
 
 
 rm("test.o")
