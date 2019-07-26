@@ -1,13 +1,6 @@
+pub struct Cpu {}
 
-pub struct Cpu {
-
-}
-
-impl Cpu {
-
-}
+impl Cpu {}
 
 #[cfg(test)]
-mod test {
-
-}
+mod test {}
