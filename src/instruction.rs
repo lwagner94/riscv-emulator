@@ -2,7 +2,7 @@ use std::mem::size_of_val;
 
 
 const OPCODE_MASK: u32 = 0b111_1111;
-const REGISTER_MASK: u32 = 0b111;
+const REGISTER_MASK: u32 = 0b1_1111;
 const FUNCT7_MASK: u32 = 0b111_1111;
 const FUNCT3_MASK: u32 = 0b111;
 const IMMEDIATE_20_MASK: u32 = 0b1111_1111_1111_1111_1111;
@@ -97,6 +97,7 @@ impl Instruction {
             },
             0b110_0011 => Instruction::match_branch(code),
             0b000_0011 => Instruction::match_load(code),
+            0b010_0011 => Instruction::match_store(code),
             0b011_0011 => Instruction::match_arithmetic(code),
             _ => INVALID
         }
@@ -141,6 +142,27 @@ impl Instruction {
             0b010 => LW(rd, rs1, immediate_sign_extended),
             0b100 => LBU(rd, rs1, immediate_sign_extended),
             0b101 => LHU(rd, rs1, immediate_sign_extended),
+            _ => INVALID
+        }
+    }
+
+    fn match_store(code: u32) -> Self {
+        let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
+        let rs2 = shift_and_mask(code, 20, REGISTER_MASK);
+        let funct3 = shift_and_mask(code, 12, FUNCT3_MASK);
+
+        let imm_1_to_5 = shift_and_mask(code, 7, 0b1_1111) as u32;
+        let imm_6_to_12 = shift_and_mask(code, 25, 0b111_1111) as u32;
+
+        let mut immediate = imm_1_to_5;
+        immediate |= (imm_6_to_12 << 5);
+
+        let immediate_sign_extended = sign_extend(immediate as i32, 12);
+
+        match funct3 {
+            0b000 => SB(rs1, rs2, immediate_sign_extended),
+            0b001 => SH(rs1, rs2, immediate_sign_extended),
+            0b010 => SW(rs1, rs2, immediate_sign_extended),
             _ => INVALID
         }
     }
@@ -306,6 +328,30 @@ mod test {
             assert_eq!(Instruction::new(0b100000000000_00010_101_00001_0000011),
                        Instruction::LHU(1, 2, -2048));
         }
+    }
+
+    mod store {
+        use super::super::*;
+
+        #[test]
+        fn test_sb() {
+            assert_eq!(Instruction::new(0b1000000_00010_00001_000_00000_0100011),
+                       Instruction::SB(1, 2, -2048));
+        }
+
+        #[test]
+        fn test_sh() {
+            assert_eq!(Instruction::new(0b1000000_00010_00001_001_00000_0100011),
+                       Instruction::SH(1, 2, -2048));
+        }
+
+        #[test]
+        fn test_sw() {
+            assert_eq!(Instruction::new(0b1000000_00010_00001_010_00000_0100011),
+                       Instruction::SW(1, 2, -2048));
+        }
+
+
     }
 
 

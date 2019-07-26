@@ -6,7 +6,7 @@ from sh import rm
 import re
 
 
-gcc("test.S", "-c", "-o", "test.o",  "-march=rv32i", "-mabi=ilp32")
+gcc("test.S", "-c", "-o", "test.o",  "-march=rv32im", "-mabi=ilp32")
 for line in objdump("-d", "test.o"):
     m = re.match(r"^\s+([0-9a-f]+):\s+([0-9a-f]+)\s+(.*)$", line)
     if m:
