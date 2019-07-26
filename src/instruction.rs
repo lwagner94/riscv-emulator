@@ -34,6 +34,9 @@ pub enum Instruction {
     XORI(usize, usize, u32),
     ORI(usize, usize, u32),
     ANDI(usize, usize, u32),
+    SLLI(usize, usize, u32),
+    SRLI(usize, usize, u32),
+    SRAI(usize, usize, u32),
     ADD(usize, usize, usize),
     SUB(usize, usize, usize),
     SLL(usize, usize, usize),
@@ -56,17 +59,17 @@ impl Instruction {
         let opcode = code & OPCODE_MASK;
 
         match opcode {
-            0b0110111 => {
+            0b011_0111 => {
                 let rd = shift_and_mask(code, 7, REGISTER_MASK);
                 let immediate = shift_and_mask(code, 12, IMMEDIATE_20_MASK) as u32;
                 LUI(rd, immediate)
             },
-            0b0010111 => {
+            0b001_0111 => {
                 let rd = shift_and_mask(code, 7, REGISTER_MASK);
                 let immediate = shift_and_mask(code, 12, IMMEDIATE_20_MASK) as u32;
                 AUIPC(rd, immediate)
             },
-            0b1101111 => {
+            0b110_1111 => {
                 let rd = shift_and_mask(code, 7, REGISTER_MASK);
 
                 let imm_0_to_10 = shift_and_mask(code, 21, 0b11_1111_1111) as u32;
@@ -74,14 +77,14 @@ impl Instruction {
                 let imm_11 = shift_and_mask(code, 20, 0b1) as u32;
                 let imm_20 = shift_and_mask(code, 31, 0b1) as u32;
 
-                let mut immediate = (imm_20 << 19);
-                immediate |= (imm_11 << 10);
-                immediate |= (imm_0_to_10);
-                immediate |= (imm_12_to_19 << 11);
+                let mut immediate = imm_20 << 19;
+                immediate |= imm_11 << 10;
+                immediate |= imm_0_to_10;
+                immediate |= imm_12_to_19 << 11;
 
                 JAL(rd, immediate)
             },
-            0b1100111 => {
+            0b110_0111 => {
                 let rd = shift_and_mask(code, 7, REGISTER_MASK);
                 let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
                 let immediate = shift_and_mask(code, 20, IMMEDIATE_12_MASK) as u32;
@@ -98,6 +101,7 @@ impl Instruction {
             0b110_0011 => Instruction::match_branch(code),
             0b000_0011 => Instruction::match_load(code),
             0b010_0011 => Instruction::match_store(code),
+            0b001_0011 => Instruction::match_arithmetic_immediate(code),
             0b011_0011 => Instruction::match_arithmetic(code),
             _ => INVALID
         }
@@ -109,14 +113,14 @@ impl Instruction {
         let rs2 = shift_and_mask(code, 20, REGISTER_MASK);
 
         let imm_1_to_4 = shift_and_mask(code, 8, 0b1111) as u32;
-        let imm_5_to_11 = shift_and_mask(code, 25, 0b111111) as u32;
+        let imm_5_to_11 = shift_and_mask(code, 25, 0b11_1111) as u32;
         let imm_11 = shift_and_mask(code, 7, 0b1) as u32;
         let imm_12 = shift_and_mask(code, 31, 0b1) as u32;
 
         let mut immediate = imm_1_to_4;
-        immediate |= (imm_5_to_11 << 4);
-        immediate |= (imm_11 << 10);
-        immediate |= (imm_12 << 11);
+        immediate |= imm_5_to_11 << 4;
+        immediate |= imm_11 << 10;
+        immediate |= imm_12 << 11;
 
         match funct3 {
             0b000 => BEQ(rs1, rs2, immediate),
@@ -155,7 +159,7 @@ impl Instruction {
         let imm_6_to_12 = shift_and_mask(code, 25, 0b111_1111) as u32;
 
         let mut immediate = imm_1_to_5;
-        immediate |= (imm_6_to_12 << 5);
+        immediate |= imm_6_to_12 << 5;
 
         let immediate_sign_extended = sign_extend(immediate as i32, 12);
 
@@ -163,6 +167,39 @@ impl Instruction {
             0b000 => SB(rs1, rs2, immediate_sign_extended),
             0b001 => SH(rs1, rs2, immediate_sign_extended),
             0b010 => SW(rs1, rs2, immediate_sign_extended),
+            _ => INVALID
+        }
+    }
+
+    fn match_arithmetic_immediate(code: u32) -> Self {
+        let rd = shift_and_mask(code, 7, REGISTER_MASK);
+        let funct3 = shift_and_mask(code, 12, FUNCT3_MASK);
+        let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
+        let immediate = shift_and_mask(code, 20, IMMEDIATE_12_MASK) as u32;
+        let immediate_sign_extended = sign_extend(immediate as i32, 12) as u32;
+
+        let shift_amount = immediate & 0b1_1111;
+        let funct7 = shift_and_mask(code, 25, FUNCT7_MASK);
+
+            match funct3 {
+            0b000 => ADDI(rd, rs1, immediate_sign_extended),
+            0b010 => SLTI(rd, rs1, immediate_sign_extended),
+            0b011 => SLTIU(rd, rs1, immediate_sign_extended),
+            0b100 => XORI(rd, rs1, immediate_sign_extended),
+            0b110 => ORI(rd, rs1, immediate_sign_extended),
+            0b111 => ANDI(rd, rs1, immediate_sign_extended),
+            0b001 => SLLI(rd, rs1, shift_amount),
+            0b101 => {
+                if funct7 == 0b010_0000 {
+                    SRAI(rd, rs1, shift_amount)
+                }
+                else if funct7 == 0 {
+                    SRLI(rd, rs1, shift_amount)
+                }
+                else {
+                    INVALID
+                }
+            }
             _ => INVALID
         }
     }
@@ -176,7 +213,7 @@ impl Instruction {
 
         match funct3 {
             0b000 => {
-                if funct7 == 0b100000 {
+                if funct7 == 0b010_0000 {
                     SUB(rd, rs1, rs2)
                 }
                 else if funct7 == 0{
@@ -191,7 +228,7 @@ impl Instruction {
             0b011 => SLTU(rd, rs1, rs2),
             0b100 => XOR(rd, rs1, rs2),
             0b101 => {
-                if funct7 == 0b100000 {
+                if funct7 == 0b010_0000 {
                     SRA(rd, rs1, rs2)
                 }
                 else if funct7 == 0 {
@@ -235,8 +272,6 @@ mod test {
                        Instruction::AUIPC(1, 0xfffff));
         }
     }
-
-
 
     mod jump {
         use super::super::*;
@@ -354,7 +389,65 @@ mod test {
 
     }
 
+    mod arithmetic_immediate {
+        use super::super::*;
 
+        #[test]
+        fn test_addi() {
+            assert_eq!(Instruction::new(0b1000000_00000_00010_000_00001_0010011),
+                       Instruction::ADDI(1, 2, (-2048i32 as u32)));
+        }
+
+        #[test]
+        fn test_slti() {
+            assert_eq!(Instruction::new(0b1000000_00000_00010_010_00001_0010011),
+                       Instruction::SLTI(1, 2, (-2048i32 as u32)));
+        }
+
+
+        #[test]
+        fn test_sltiu() {
+            assert_eq!(Instruction::new(0b1000000_00000_00010_011_00001_0010011),
+                       Instruction::SLTIU(1, 2, (-2048i32 as u32)));
+        }
+
+        #[test]
+        fn test_andi() {
+            assert_eq!(Instruction::new(0b1000000_00000_00010_100_00001_0010011),
+                       Instruction::XORI(1, 2, (-2048i32 as u32)));
+        }
+
+        #[test]
+        fn test_ori() {
+            assert_eq!(Instruction::new(0b1000000_00000_00010_110_00001_0010011),
+                       Instruction::ORI(1, 2, (-2048i32 as u32)));
+        }
+
+        #[test]
+        fn test_xori() {
+            assert_eq!(Instruction::new(0b1000000_00000_00010_111_00001_0010011),
+                       Instruction::ANDI(1, 2, (-2048i32 as u32)));
+        }
+
+        #[test]
+        fn test_slli() {
+            assert_eq!(Instruction::new(0b0000000_11111_00010_001_00001_0010011),
+                       Instruction::SLLI(1, 2, 31));
+        }
+
+        #[test]
+        fn test_srli() {
+            assert_eq!(Instruction::new(0b0000000_11111_00010_101_00001_0010011),
+                       Instruction::SRLI(1, 2, 31));
+        }
+
+        #[test]
+        fn test_srai() {
+            assert_eq!(Instruction::new(0b0100000_11111_00010_101_00001_0010011),
+                       Instruction::SRAI(1, 2, 31));
+        }
+
+    }
 
     mod arithmetic_register {
         use super::super::*;
