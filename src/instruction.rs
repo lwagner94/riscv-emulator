@@ -1,3 +1,5 @@
+use std::mem::size_of_val;
+
 
 const OPCODE_MASK: u32 = 0b111_1111;
 const REGISTER_MASK: u32 = 0b111;
@@ -18,6 +20,20 @@ pub enum Instruction {
     BGE(usize, usize, u32),
     BLTU(usize, usize, u32),
     BGEU(usize, usize, u32),
+    LB(usize, usize, i32),
+    LH(usize, usize, i32),
+    LW(usize, usize, i32),
+    LBU(usize, usize, i32),
+    LHU(usize, usize, i32),
+    SB(usize, usize, i32),
+    SH(usize, usize, i32),
+    SW(usize, usize, i32),
+    ADDI(usize, usize, u32),
+    SLTI(usize, usize, u32),
+    SLTIU(usize, usize, u32),
+    XORI(usize, usize, u32),
+    ORI(usize, usize, u32),
+    ANDI(usize, usize, u32),
     ADD(usize, usize, usize),
     SUB(usize, usize, usize),
     SLL(usize, usize, usize),
@@ -80,7 +96,51 @@ impl Instruction {
 
             },
             0b110_0011 => Instruction::match_branch(code),
+            0b000_0011 => Instruction::match_load(code),
             0b011_0011 => Instruction::match_arithmetic(code),
+            _ => INVALID
+        }
+    }
+
+    fn match_branch(code: u32) -> Self {
+        let funct3 = shift_and_mask(code, 12, FUNCT3_MASK);
+        let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
+        let rs2 = shift_and_mask(code, 20, REGISTER_MASK);
+
+        let imm_1_to_4 = shift_and_mask(code, 8, 0b1111) as u32;
+        let imm_5_to_11 = shift_and_mask(code, 25, 0b111111) as u32;
+        let imm_11 = shift_and_mask(code, 7, 0b1) as u32;
+        let imm_12 = shift_and_mask(code, 31, 0b1) as u32;
+
+        let mut immediate = imm_1_to_4;
+        immediate |= (imm_5_to_11 << 4);
+        immediate |= (imm_11 << 10);
+        immediate |= (imm_12 << 11);
+
+        match funct3 {
+            0b000 => BEQ(rs1, rs2, immediate),
+            0b001 => BNE(rs1, rs2, immediate),
+            0b100 => BLT(rs1, rs2, immediate),
+            0b101 => BGE(rs1, rs2, immediate),
+            0b110 => BLTU(rs1, rs2, immediate),
+            0b111 => BGEU(rs1, rs2, immediate),
+            _ => INVALID
+        }
+    }
+
+    fn match_load(code: u32) -> Self {
+        let rd = shift_and_mask(code, 7, REGISTER_MASK);
+        let funct3 = shift_and_mask(code, 12, FUNCT3_MASK);
+        let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
+        let immediate = shift_and_mask(code, 20, IMMEDIATE_12_MASK) as i32;
+        let immediate_sign_extended = sign_extend(immediate, 12);
+
+        match funct3 {
+            0b000 => LB(rd, rs1, immediate_sign_extended),
+            0b001 => LH(rd, rs1, immediate_sign_extended),
+            0b010 => LW(rd, rs1, immediate_sign_extended),
+            0b100 => LBU(rd, rs1, immediate_sign_extended),
+            0b101 => LHU(rd, rs1, immediate_sign_extended),
             _ => INVALID
         }
     }
@@ -125,42 +185,20 @@ impl Instruction {
         }
     }
 
-    fn match_branch(code: u32) -> Self {
-        let funct3 = shift_and_mask(code, 12, FUNCT3_MASK);
-        let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
-        let rs2 = shift_and_mask(code, 20, REGISTER_MASK);
-
-        let imm_1_to_4 = shift_and_mask(code, 8, 0b1111) as u32;
-        let imm_5_to_11 = shift_and_mask(code, 25, 0b111111) as u32;
-        let imm_11 = shift_and_mask(code, 7, 0b1) as u32;
-        let imm_12 = shift_and_mask(code, 31, 0b1) as u32;
-
-        let mut immediate = imm_1_to_4;
-        immediate |= (imm_5_to_11 << 4);
-        immediate |= (imm_11 << 10);
-        immediate |= (imm_12 << 11);
-
-        match funct3 {
-            0b000 => BEQ(rs1, rs2, immediate),
-            0b001 => BNE(rs1, rs2, immediate),
-            0b100 => BLT(rs1, rs2, immediate),
-            0b101 => BGE(rs1, rs2, immediate),
-            0b110 => BLTU(rs1, rs2, immediate),
-            0b111 => BGEU(rs1, rs2, immediate),
-            _ => INVALID
-        }
-    }
-
 }
 
 fn shift_and_mask(code: u32, shift: u32, mask: u32) -> usize {
     ((code >> shift) & mask) as usize
 }
 
+fn sign_extend(x: i32, nbits: u32) -> i32 {
+    let notherbits = size_of_val(&x) as u32 * 8 - nbits;
+    x.wrapping_shl(notherbits).wrapping_shr(notherbits)
+}
 
 #[cfg(test)]
 mod test {
-    mod u_type {
+    mod load_immediate {
         use super::super::*;
 
         #[test]
@@ -174,18 +212,11 @@ mod test {
             assert_eq!(Instruction::new(0b11111111111111111111_00001_0010111),
                        Instruction::AUIPC(1, 0xfffff));
         }
-
-        #[test]
-        fn test_jal() {
-            assert_eq!(Instruction::new(0b01110100000100001010_00001_1101111),
-                       Instruction::JAL(1, 0xaf40 / 2));
-        }
-
     }
 
 
 
-    mod j_type {
+    mod jump {
         use super::super::*;
 
         #[test]
@@ -202,7 +233,7 @@ mod test {
 
     }
 
-    mod branch_tests {
+    mod branch {
         use super::super::*;
 
         #[test]
@@ -243,9 +274,43 @@ mod test {
 
     }
 
+    mod load {
+        use super::super::*;
+
+        #[test]
+        fn test_lb() {
+            assert_eq!(Instruction::new(0b100000000000_00010_000_00001_0000011),
+                       Instruction::LB(1, 2, -2048));
+        }
+
+        #[test]
+        fn test_lh() {
+            assert_eq!(Instruction::new(0b100000000000_00010_001_00001_0000011),
+                       Instruction::LH(1, 2, -2048));
+        }
+
+        #[test]
+        fn test_lw() {
+            assert_eq!(Instruction::new(0b100000000000_00010_010_00001_0000011),
+                       Instruction::LW(1, 2, -2048));
+        }
+
+        #[test]
+        fn test_lbu() {
+            assert_eq!(Instruction::new(0b100000000000_00010_100_00001_0000011),
+                       Instruction::LBU(1, 2, -2048));
+        }
+
+        #[test]
+        fn test_lhu() {
+            assert_eq!(Instruction::new(0b100000000000_00010_101_00001_0000011),
+                       Instruction::LHU(1, 2, -2048));
+        }
+    }
 
 
-    mod arithmetic_tests {
+
+    mod arithmetic_register {
         use super::super::*;
 
         #[test]
@@ -306,6 +371,15 @@ mod test {
         fn test_and() {
             assert_eq!(Instruction::new(0b0000000_00011_00010_111_00001_0110011),
                        Instruction::AND(1, 2, 3));
+        }
+    }
+
+    mod util {
+        use super::super::*;
+
+        #[test]
+        fn test_sign_extend() {
+            assert_eq!(sign_extend(0b100000000000, 12), -2048)
         }
     }
 
