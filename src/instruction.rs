@@ -46,6 +46,7 @@ pub enum Instruction {
     SRA(usize, usize, usize),
     OR(usize, usize, usize),
     AND(usize, usize, usize),
+    EBREAK,
     INVALID,
 }
 
@@ -98,6 +99,20 @@ impl Instruction {
             0b010_0011 => Instruction::match_store(code),
             0b001_0011 => Instruction::match_arithmetic_immediate(code),
             0b011_0011 => Instruction::match_arithmetic(code),
+            0b111_0011 => {
+                let rd = shift_and_mask(code, 7, REGISTER_MASK);
+                let funct3 = shift_and_mask(code, 12, FUNCT3_MASK);
+                let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
+                let imm12 = shift_and_mask(code, 20, IMMEDIATE_12_MASK);
+
+                if rd == 0 && funct3 == 0 && rs1 == 0 && imm12 == 1 {
+                    EBREAK
+                } else {
+                    INVALID
+                }
+
+
+            }
             _ => INVALID,
         }
     }
@@ -569,6 +584,18 @@ mod test {
             assert_eq!(
                 Instruction::new(0b0000000_00011_00010_111_00001_0110011),
                 Instruction::AND(1, 2, 3)
+            );
+        }
+    }
+
+    mod other {
+        use super::super::*;
+
+        #[test]
+        fn test_ebreak() {
+            assert_eq!(
+                Instruction::new(0x00100073),
+                Instruction::EBREAK
             );
         }
     }

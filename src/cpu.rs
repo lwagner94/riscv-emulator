@@ -1,10 +1,11 @@
 use crate::instruction::Instruction;
-use crate::addressspace::AddressSpace;
+use crate::addressspace::{AddressSpace, MemoryDevice};
 
 pub struct Cpu<'a> {
     memory: &'a mut AddressSpace,
     registers: [u32; 32],
-    pc: u32
+    pc: u32,
+    running: bool
 }
 
 
@@ -13,9 +14,21 @@ impl<'a> Cpu<'a> {
         Self {
             memory,
             registers: [0u32; 32],
-            pc: 0u32
+            pc: 0u32,
+            running: true
 
         }
+    }
+
+    pub fn run(&mut self) {
+
+        while self.running {
+            let encoded_instruction = self.memory.read_word(self.pc);
+            let instruction = Instruction::new(encoded_instruction);
+            self.execute_instruction(instruction);
+            self.pc += 4;
+        }
+
     }
 
     pub fn execute_instruction(&mut self, instruction: Instruction) {
@@ -172,22 +185,24 @@ impl<'a> Cpu<'a> {
                 let result = v1 & v2;
                 self.set_register(rd, result);
             },
-            Instruction::INVALID => {
-
-            },
-            _ => {
-
+            Instruction::EBREAK => {
+                self.running = false;
             }
+            Instruction::INVALID => {
+                panic!("Invalid Instruction detected")
+            },
         }
 
     }
 
     pub fn get_register(&self, num: usize) -> u32 {
-        return self.registers[num];
+        self.registers[num]
     }
 
     pub fn set_register(&mut self, num: usize, value: u32) {
-        self.registers[num] = value
+        if num != 0 {
+            self.registers[num] = value
+        }
     }
 }
 
@@ -250,7 +265,10 @@ mod test {
         let mut memory = AddressSpace::new();
         let mut cpu = Cpu::new(&mut memory);
 
+        cpu.set_register(1, 0xCAFEBABE);
+        assert_eq!(cpu.get_register(1), 0xCAFEBABE);
+        assert_eq!(cpu.get_register(0), 0);
         cpu.set_register(0, 0xCAFEBABE);
-        assert_eq!(cpu.get_register(0), 0xCAFEBABE);
+        assert_eq!(cpu.get_register(0), 0);
     }
 }

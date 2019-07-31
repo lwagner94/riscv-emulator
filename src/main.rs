@@ -20,7 +20,6 @@ fn main() {
     loader::load_program(path, &mut memory).unwrap();
 
     let mut cpu = Cpu::new(&mut memory);
-
-    dbg!(memory.read_word(0));
+    cpu.run();
 
 }
