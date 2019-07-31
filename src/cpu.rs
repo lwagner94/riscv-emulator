@@ -1,15 +1,17 @@
-use std::num::Wrapping;
 use crate::instruction::Instruction;
+use crate::addressspace::AddressSpace;
 
-pub struct Cpu {
+pub struct Cpu<'a> {
+    memory: &'a mut AddressSpace,
     registers: [u32; 32],
     pc: u32
 }
 
 
-impl Cpu {
-    pub fn new() -> Self {
+impl<'a> Cpu<'a> {
+    pub fn new(memory: &'a mut AddressSpace) -> Cpu<'a> {
         Self {
+            memory,
             registers: [0u32; 32],
             pc: 0u32
 
@@ -193,14 +195,13 @@ impl Cpu {
 mod test {
     use super::*;
 
-    fn init_cpu() -> Cpu {
-        Cpu::new()
-    }
+
 
     macro_rules! immediate_test {
         ($instr:ident, $first:expr, $second:expr, $result:expr) => {
             {
-                let mut cpu = init_cpu();
+                let mut memory = AddressSpace::new();
+                let mut cpu = Cpu::new(&mut memory);
                 cpu.set_register(2, $first);
 
                 cpu.execute_instruction(Instruction::$instr(1, 2, $second));
@@ -212,7 +213,8 @@ mod test {
     macro_rules! register_test {
         ($instr:ident, $first:expr, $second:expr, $result:expr) => {
             {
-                let mut cpu = init_cpu();
+                let mut memory = AddressSpace::new();
+                let mut cpu = Cpu::new(&mut memory);
                 cpu.set_register(2, $first);
                 cpu.set_register(3, $second);
 
@@ -245,7 +247,8 @@ mod test {
 
     #[test]
     fn test_register() {
-        let mut cpu = init_cpu();
+        let mut memory = AddressSpace::new();
+        let mut cpu = Cpu::new(&mut memory);
 
         cpu.set_register(0, 0xCAFEBABE);
         assert_eq!(cpu.get_register(0), 0xCAFEBABE);

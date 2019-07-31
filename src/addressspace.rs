@@ -1,9 +1,9 @@
 
 use crate::util;
 
-type Address = u32;
+pub type Address = u32;
 
-trait MemoryDevice {
+pub trait MemoryDevice {
     fn read_byte(&self, address: Address) -> u8;
     fn read_halfword(&self, address: Address) -> u16;
     fn read_word(&self, address: Address) -> u32;
@@ -15,12 +15,12 @@ trait MemoryDevice {
 
 
 
-struct AddressSpace {
+pub struct AddressSpace {
     memory: Vec<u8>
 }
 
 impl AddressSpace {
-    fn new() -> Self {
+    pub fn new() -> Self {
         AddressSpace {
             memory: vec![0; 4096] // 4KB for now
         }

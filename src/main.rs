@@ -1,28 +1,26 @@
-use std::io;
-use std::io::prelude::*;
-use std::fs::File;
+use std::env;
 
+use crate::addressspace::{AddressSpace, MemoryDevice};
+use crate::cpu::Cpu;
 
 mod cpu;
 mod instruction;
 mod opcode;
 mod addressspace;
 mod util;
+mod loader;
 
-fn main() -> io::Result<()> {
-    let mut f = File::open("programs/notmain.bin")?;
+fn main() {
+    let args: Vec<String> = env::args().collect();
 
-    let mut buffer = Vec::new();
-    // read the whole file
-    f.read_to_end(&mut buffer)?;
-
+    let path = args.get(1).expect("Expected filename");
 
 
+    let mut memory = AddressSpace::new();
+    loader::load_program(path, &mut memory).unwrap();
 
-    for byte in &buffer {
-        println!("{:x}", byte)
-    }
+    let mut cpu = Cpu::new(&mut memory);
 
-    // and more! See the other methods for more details.
-    Ok(())
+    dbg!(memory.read_word(0));
+
 }
