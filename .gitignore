@@ -1,5 +1,6 @@
 test.o
 test.S
+programs/
 .idea/
 /target
 **/*.rs.bk
