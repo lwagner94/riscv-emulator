@@ -1,4 +1,5 @@
-use std::mem::size_of_val;
+use crate::util::sign_extend;
+
 
 const OPCODE_MASK: u32 = 0b111_1111;
 const REGISTER_MASK: u32 = 0b1_1111;
@@ -253,10 +254,7 @@ fn shift_and_mask(code: u32, shift: u32, mask: u32) -> usize {
     ((code >> shift) & mask) as usize
 }
 
-fn sign_extend(x: i32, nbits: u32) -> i32 {
-    let notherbits = size_of_val(&x) as u32 * 8 - nbits;
-    x.wrapping_shl(notherbits).wrapping_shr(notherbits)
-}
+
 
 #[cfg(test)]
 mod test {
@@ -599,14 +597,4 @@ mod test {
             );
         }
     }
-
-    mod util {
-        use super::super::*;
-
-        #[test]
-        fn test_sign_extend() {
-            assert_eq!(sign_extend(0b100000000000, 12), -2048)
-        }
-    }
-
 }

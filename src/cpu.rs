@@ -1,5 +1,6 @@
 use crate::instruction::Instruction;
 use crate::addressspace::{AddressSpace, MemoryDevice};
+use crate::util;
 
 pub struct Cpu<'a> {
     memory: &'a mut AddressSpace,
@@ -40,6 +41,10 @@ impl<'a> Cpu<'a> {
             new_pc = new_pc.wrapping_add((imm as i32) * 2);
             self.pc = new_pc as u32;
         }
+    }
+
+    fn calculate_address(&self, base_reg: usize, offset: i32) -> u32{
+        (self.get_register(base_reg) as i32).wrapping_add(offset) as u32
     }
 
 
@@ -102,28 +107,42 @@ impl<'a> Cpu<'a> {
                 self.set_pc_for_branch(v1 >= v2, imm);
             },
             Instruction::LB(rd, rs1, imm) => {
+                let addr = self.calculate_address(rs1, imm);
+                let byte = self.memory.read_byte(addr);
+                self.set_register(rd, util::sign_extend(byte as i32, 8) as u32)
 
             },
             Instruction::LH(rd, rs1, imm) => {
-
+                let addr = self.calculate_address(rs1, imm);
+                let halfword = self.memory.read_halfword(addr);
+                self.set_register(rd, util::sign_extend(halfword as i32, 16) as u32)
             },
             Instruction::LW(rd, rs1, imm) => {
-
+                let addr = self.calculate_address(rs1, imm);
+                let word = self.memory.read_word(addr);
+                self.set_register(rd, word)
             },
             Instruction::LBU(rd, rs1, imm) => {
-
+                let addr = self.calculate_address(rs1, imm);
+                let byte = self.memory.read_byte(addr);
+                self.set_register(rd, byte as u32)
             },
             Instruction::LHU(rd, rs1, imm) => {
-
+                let addr = self.calculate_address(rs1, imm);
+                let halfword = self.memory.read_halfword(addr);
+                self.set_register(rd, halfword as u32)
             },
-            Instruction::SB(r1, rs2, imm) => {
-
+            Instruction::SB(rs1, rs2, imm) => {
+                let addr = self.calculate_address(rs1, imm);
+                self.memory.write_byte(addr, self.get_register(rs2) as u8)
             },
-            Instruction::SH(r1, rs2, imm) => {
-
+            Instruction::SH(rs1, rs2, imm) => {
+                let addr = self.calculate_address(rs1, imm);
+                self.memory.write_halfword(addr, self.get_register(rs2) as u16)
             },
-            Instruction::SW(r1, rs2, imm) => {
-
+            Instruction::SW(rs1, rs2, imm) => {
+                let addr = self.calculate_address(rs1, imm);
+                self.memory.write_word(addr, self.get_register(rs2) as u32)
             },
             Instruction::ADDI(rd, rs1, imm) => {
                 let v1 = self.get_register(rs1) as i32;
@@ -387,6 +406,72 @@ mod test {
         branch_test!(BGEU, 9, 10, 8, false);
         branch_test!(BGEU, 10, 10, 8, true);
         branch_test!(BGEU, -10i32, -9i32, 8, false);
+    }
+
+    #[test]
+    fn test_byte_store() {
+        let mut memory = AddressSpace::new();
+        let mut cpu = Cpu::new(&mut memory);
+
+        cpu.set_register(1, 0xF0);
+        cpu.set_register(2, 0xCAFEBABE);
+        cpu.execute_instruction(Instruction::SB(1, 2, 16));
+        assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
+        assert_eq!(0xBE, memory.read_byte(0xF0 + 16));
+        assert_eq!(0, memory.read_byte(0xF0 + 16 + 1));
+    }
+
+    #[test]
+    fn test_halfword_store() {
+        let mut memory = AddressSpace::new();
+        let mut cpu = Cpu::new(&mut memory);
+
+        cpu.set_register(1, 0xF0);
+        cpu.set_register(2, 0xCAFEBABE);
+        cpu.execute_instruction(Instruction::SH(1, 2, 16));
+        assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
+        assert_eq!(0xBABE, memory.read_halfword(0xF0 + 16));
+        assert_eq!(0, memory.read_byte(0xF0 + 16 + 3));
+    }
+
+    #[test]
+    fn test_word_store() {
+        let mut memory = AddressSpace::new();
+        let mut cpu = Cpu::new(&mut memory);
+
+        cpu.set_register(1, 0xF0);
+        cpu.set_register(2, 0xCAFEBABE);
+        cpu.execute_instruction(Instruction::SW(1, 2, 16));
+        assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
+        assert_eq!(0xCAFEBABE, memory.read_word(0xF0 + 16));
+        assert_eq!(0, memory.read_byte(0xF0 + 16 + 5));
+    }
+
+    macro_rules! load_test {
+        ($instr:ident,  $memop:ident, $value:expr, $expected:expr) => {
+            {
+                let mut memory = AddressSpace::new();
+                memory.$memop(0xF0 + 16, $value);
+                let mut cpu = Cpu::new(&mut memory);
+
+                cpu.set_register(2, 0xF0);
+                cpu.execute_instruction(Instruction::$instr(1, 2, 16));
+                assert_eq!(cpu.get_register(1), $expected);
+            }
+        };
+    }
+
+    #[test]
+    fn test_loads() {
+        load_test!(LB, write_byte, 0b1111_1111, !0);
+        load_test!(LB, write_byte, 0b0111_1111, 0b0111_1111);
+        load_test!(LBU, write_byte, 0b1111_1111, 0b1111_1111);
+
+        load_test!(LH, write_halfword, 0b1111_1111_1111_1111, !0);
+        load_test!(LH, write_halfword, 0b0111_1111_1111_1111, 0b0111_1111_1111_1111);
+        load_test!(LHU, write_halfword, 0b1111_1111_1111_1111, 0b1111_1111_1111_1111);
+
+        load_test!(LW, write_word, 0xCAFEBABE, 0xCAFEBABE);
     }
 
 

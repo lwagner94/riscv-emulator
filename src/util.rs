@@ -1,3 +1,5 @@
+use std::mem::size_of_val;
+
 pub fn read_u16_from_byteslice(slice: &[u8]) -> u16 {
     ((slice[0]) as u16) << 0 | ((slice[1]) as u16) << 8
 }
@@ -19,6 +21,11 @@ pub fn write_u32_to_byteslice(slice: &mut [u8], value: u32) {
     slice[1] = (value >> 8) as u8;
     slice[2] = (value >> 16) as u8;
     slice[3] = (value >> 24) as u8;
+}
+
+pub fn sign_extend(x: i32, nbits: u32) -> i32 {
+    let notherbits = size_of_val(&x) as u32 * 8 - nbits;
+    x.wrapping_shl(notherbits).wrapping_shr(notherbits)
 }
 
 #[cfg(test)]
@@ -52,4 +59,10 @@ mod test {
         write_u32_to_byteslice(&mut buffer, 0xDDCCBBAA);
         assert_eq!([0xAA, 0xBB, 0xCC, 0xDD], buffer);
     }
+
+    #[test]
+    fn test_sign_extend() {
+        assert_eq!(sign_extend(0b100000000000, 12), -2048)
+    }
+
 }
