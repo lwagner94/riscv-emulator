@@ -81,6 +81,8 @@ impl Instruction {
                 immediate |= imm_0_to_10;
                 immediate |= imm_12_to_19 << 11;
 
+                immediate = sign_extend(immediate as i32, 20) as u32;
+
                 JAL(rd, immediate)
             }
             0b110_0111 => {
@@ -132,6 +134,8 @@ impl Instruction {
         immediate |= imm_5_to_11 << 4;
         immediate |= imm_11 << 10;
         immediate |= imm_12 << 11;
+
+        immediate = sign_extend(immediate as i32, 12) as u32;
 
         match funct3 {
             0b000 => BEQ(rs1, rs2, immediate),

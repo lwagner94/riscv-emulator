@@ -28,6 +28,8 @@ impl<'a> Cpu<'a> {
             let encoded_instruction = self.memory.read_word(self.pc);
             let instruction = Instruction::new(encoded_instruction);
 
+            println!("Executing PC: {:x} {:?}", self.pc, instruction);
+
             self.execute_instruction(instruction);
             self.pc += 4;
 
@@ -39,6 +41,7 @@ impl<'a> Cpu<'a> {
         if condition {
             let mut new_pc = self.pc as i32;
             new_pc = new_pc.wrapping_add((imm as i32) * 2);
+            new_pc -= 4;
             self.pc = new_pc as u32;
         }
     }
@@ -56,7 +59,6 @@ impl<'a> Cpu<'a> {
             Instruction::AUIPC(rd, imm) => {
                 let result = self.pc + imm << 12;
                 self.set_register(rd, result)
-
             },
             Instruction::JAL(rd, imm) => {
                 let result = self.pc + 4;
@@ -64,22 +66,20 @@ impl<'a> Cpu<'a> {
                 let mut new_pc = self.pc as i32;
                 new_pc = new_pc.wrapping_add((imm as i32) * 2);
 
-                self.pc = new_pc as u32;
+                self.pc = (new_pc - 4) as u32;
                 self.set_register(rd, result);
             },
             Instruction::JALR(rd, rs1, imm) => {
                 let mut new_pc = self.get_register(rs1) as i32;
                 new_pc = new_pc.wrapping_add(imm as i32);
                 let result = self.pc + 4;
-                self.pc = (new_pc as u32) & !1u32;
+                self.pc = ((new_pc as u32) & !1u32) - 4;
                 self.set_register(rd, result);
-
             },
             Instruction::BEQ(rs1, rs2, imm) => {
                 let v1 = self.get_register(rs1);
                 let v2 = self.get_register(rs2);
                 self.set_pc_for_branch(v1 == v2, imm);
-
             },
             Instruction::BNE(rs1, rs2, imm) => {
                 let v1 = self.get_register(rs1);
@@ -110,7 +110,6 @@ impl<'a> Cpu<'a> {
                 let addr = self.calculate_address(rs1, imm);
                 let byte = self.memory.read_byte(addr);
                 self.set_register(rd, util::sign_extend(byte as i32, 8) as u32)
-
             },
             Instruction::LH(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
@@ -148,13 +147,16 @@ impl<'a> Cpu<'a> {
                 let v1 = self.get_register(rs1) as i32;
                 let result = v1.wrapping_add(imm as i32);
                 self.set_register(rd, result as u32);
-
             },
             Instruction::SLTI(rd, rs1, imm) => {
-
+                let v1 = self.get_register(rs1) as i32;
+                let result = if v1 < (imm as i32) {1} else {0};
+                self.set_register(rd, result);
             },
             Instruction::SLTIU(rd, rs1, imm) => {
-
+                let v1 = self.get_register(rs1);
+                let result = if v1 < imm {1} else {0};
+                self.set_register(rd, result);
             },
             Instruction::XORI(rd, rs1, imm) => {
                 let v1 = self.get_register(rs1);
@@ -205,10 +207,16 @@ impl<'a> Cpu<'a> {
                 self.set_register(rd, result);
             },
             Instruction::SLT(rd, rs1, rs2) => {
-
+                let v1 = self.get_register(rs1) as i32;
+                let v2 = self.get_register(rs2) as i32;
+                let result = if v1 < v2 {1} else {0};
+                self.set_register(rd, result as u32);
             },
             Instruction::SLTU(rd, rs1, rs2) => {
-
+                let v1 = self.get_register(rs1);
+                let v2 = self.get_register(rs2);
+                let result = if v1 < v2 {1} else {0};
+                self.set_register(rd, result);
            },
             Instruction::XOR(rd, rs1, rs2) => {
                 let v1 = self.get_register(rs1);
@@ -272,9 +280,9 @@ mod test {
             {
                 let mut memory = AddressSpace::new();
                 let mut cpu = Cpu::new(&mut memory);
-                cpu.set_register(2, $first);
+                cpu.set_register(2, $first as u32);
 
-                cpu.execute_instruction(Instruction::$instr(1, 2, $second));
+                cpu.execute_instruction(Instruction::$instr(1, 2, $second as u32));
                 assert_eq!(cpu.get_register(1), $result);
             }
         };
@@ -285,11 +293,11 @@ mod test {
             {
                 let mut memory = AddressSpace::new();
                 let mut cpu = Cpu::new(&mut memory);
-                cpu.set_register(2, $first);
-                cpu.set_register(3, $second);
+                cpu.set_register(2, $first as u32);
+                cpu.set_register(3, $second as u32);
 
                 cpu.execute_instruction(Instruction::$instr(1, 2, 3));
-                assert_eq!(cpu.get_register(1), $result);
+                assert_eq!(cpu.get_register(1), $result as u32);
             }
         };
     }
@@ -300,18 +308,34 @@ mod test {
         immediate_test!(XORI, 0b1010, 0b0110, 0b1100);
         immediate_test!(ORI, 0b1010, 0b0110, 0b1110);
         immediate_test!(ANDI, 0b1010, 0b0110, 0b0010);
+
+        immediate_test!(SLTI, 0, 0, 0);
+        immediate_test!(SLTI, 0, -1i32, 0);
+        immediate_test!(SLTI, -1i32, 0, 1);
+
+        immediate_test!(SLTIU, 0, 0, 0);
+        immediate_test!(SLTIU, -1i32, 0, 0);
+        immediate_test!(SLTIU, 0, 1, 1);
     }
 
     #[test]
     fn test_register_ops() {
         register_test!(ADD, 10, 20, 30);
-        register_test!(SUB, 10, 20, -10i32 as u32);
+        register_test!(SUB, 10, 20, -10i32);
         register_test!(XOR, 0b1010, 0b0110, 0b1100);
         register_test!(OR, 0b1010, 0b0110, 0b1110);
         register_test!(AND, 0b1010, 0b0110, 0b0010);
         register_test!(SLL, 0b1010, 2, 0b101000);
         register_test!(SRL, 0b1010, 2, 0b10);
         register_test!(SRA, 0b1000_0000_0000_0000_0000_0000_0000_0010, 1, 0b1100_0000_0000_0000_0000_0000_0000_0001);
+
+        register_test!(SLT, 0, 0, 0);
+        register_test!(SLT, 0, -1i32, 0);
+        register_test!(SLT, -1i32, 0, 1);
+
+        register_test!(SLTU, 0, 0, 0);
+        register_test!(SLTU, -1i32, 0, 0);
+        register_test!(SLTU, 0, 1, 1);
 
     }
 

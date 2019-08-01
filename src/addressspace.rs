@@ -22,7 +22,7 @@ pub struct AddressSpace {
 impl AddressSpace {
     pub fn new() -> Self {
         AddressSpace {
-            memory: vec![0; 4096] // 4KB for now
+            memory: vec![0; 1024 * 1024] // 1MB for now
         }
     }
 }
