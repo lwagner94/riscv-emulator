@@ -1,6 +1,5 @@
 use crate::util::sign_extend;
 
-
 const OPCODE_MASK: u32 = 0b111_1111;
 const REGISTER_MASK: u32 = 0b1_1111;
 const FUNCT7_MASK: u32 = 0b111_1111;
@@ -113,8 +112,6 @@ impl Instruction {
                 } else {
                     INVALID
                 }
-
-
             }
             _ => INVALID,
         }
@@ -257,8 +254,6 @@ impl Instruction {
 fn shift_and_mask(code: u32, shift: u32, mask: u32) -> usize {
     ((code >> shift) & mask) as usize
 }
-
-
 
 #[cfg(test)]
 mod test {
@@ -595,10 +590,7 @@ mod test {
 
         #[test]
         fn test_ebreak() {
-            assert_eq!(
-                Instruction::new(0x00100073),
-                Instruction::EBREAK
-            );
+            assert_eq!(Instruction::new(0x00100073), Instruction::EBREAK);
         }
     }
 }

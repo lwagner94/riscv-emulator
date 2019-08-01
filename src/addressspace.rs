@@ -1,4 +1,3 @@
-
 use crate::util;
 
 pub type Address = u32;
@@ -13,16 +12,14 @@ pub trait MemoryDevice {
     fn write_word(&mut self, address: Address, val: u32);
 }
 
-
-
 pub struct AddressSpace {
-    memory: Vec<u8>
+    memory: Vec<u8>,
 }
 
 impl AddressSpace {
     pub fn new() -> Self {
         AddressSpace {
-            memory: vec![0; 1024 * 1024] // 1MB for now
+            memory: vec![0; 1024 * 1024], // 1MB for now
         }
     }
 }
@@ -34,12 +31,12 @@ impl MemoryDevice for AddressSpace {
 
     fn read_halfword(&self, address: Address) -> u16 {
         let index = address as usize;
-        util::read_u16_from_byteslice(&self.memory[index..index+2])
+        util::read_u16_from_byteslice(&self.memory[index..index + 2])
     }
 
     fn read_word(&self, address: Address) -> u32 {
         let index = address as usize;
-        util::read_u32_from_byteslice(&self.memory[index..index+4])
+        util::read_u32_from_byteslice(&self.memory[index..index + 4])
     }
 
     fn write_byte(&mut self, address: Address, val: u8) {
@@ -53,12 +50,12 @@ impl MemoryDevice for AddressSpace {
 
     fn write_halfword(&mut self, address: Address, val: u16) {
         let index = address as usize;
-        util::write_u16_to_byteslice(&mut self.memory[index..index+2], val);
+        util::write_u16_to_byteslice(&mut self.memory[index..index + 2], val);
     }
 
     fn write_word(&mut self, address: Address, val: u32) {
         let index = address as usize;
-        util::write_u32_to_byteslice(&mut self.memory[index..index+4], val);
+        util::write_u32_to_byteslice(&mut self.memory[index..index + 4], val);
     }
 }
 

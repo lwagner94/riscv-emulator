@@ -5,10 +5,10 @@ pub fn read_u16_from_byteslice(slice: &[u8]) -> u16 {
 }
 
 pub fn read_u32_from_byteslice(slice: &[u8]) -> u32 {
-    ((slice[0]) as u32) << 0 |
-        ((slice[1]) as u32) << 8 |
-        ((slice[2]) as u32) << 16 |
-        ((slice[3]) as u32) << 24
+    ((slice[0]) as u32) << 0
+        | ((slice[1]) as u32) << 8
+        | ((slice[2]) as u32) << 16
+        | ((slice[3]) as u32) << 24
 }
 
 pub fn write_u16_to_byteslice(slice: &mut [u8], value: u16) {
