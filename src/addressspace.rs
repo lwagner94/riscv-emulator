@@ -43,6 +43,11 @@ impl MemoryDevice for AddressSpace {
     }
 
     fn write_byte(&mut self, address: Address, val: u8) {
+        if address == 0xcafebabe {
+            print!("{}", val as char);
+
+            return;
+        }
         self.memory[address as usize] = val;
     }
 

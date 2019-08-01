@@ -28,7 +28,7 @@ impl<'a> Cpu<'a> {
             let encoded_instruction = self.memory.read_word(self.pc);
             let instruction = Instruction::new(encoded_instruction);
 
-            println!("Executing PC: {:x} {:?}", self.pc, instruction);
+            eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
 
             self.execute_instruction(instruction);
             self.pc += 4;
