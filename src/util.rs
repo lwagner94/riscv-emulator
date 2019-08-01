@@ -1,14 +1,14 @@
 use std::mem::size_of_val;
 
 pub fn read_u16_from_byteslice(slice: &[u8]) -> u16 {
-    ((slice[0]) as u16) << 0 | ((slice[1]) as u16) << 8
+    u16::from(slice[0]) | u16::from(slice[1]) << 8
 }
 
 pub fn read_u32_from_byteslice(slice: &[u8]) -> u32 {
-    ((slice[0]) as u32) << 0
-        | ((slice[1]) as u32) << 8
-        | ((slice[2]) as u32) << 16
-        | ((slice[3]) as u32) << 24
+    u32::from(slice[0])
+        | u32::from(slice[1]) << 8
+        | u32::from(slice[2]) << 16
+        | u32::from(slice[3]) << 24
 }
 
 pub fn write_u16_to_byteslice(slice: &mut [u8], value: u16) {

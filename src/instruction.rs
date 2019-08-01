@@ -431,7 +431,7 @@ mod test {
         fn test_addi() {
             assert_eq!(
                 Instruction::new(0b1000000_00000_00010_000_00001_0010011),
-                Instruction::ADDI(1, 2, (-2048i32 as u32))
+                Instruction::ADDI(1, 2, -2048i32 as u32)
             );
         }
 
@@ -439,7 +439,7 @@ mod test {
         fn test_slti() {
             assert_eq!(
                 Instruction::new(0b1000000_00000_00010_010_00001_0010011),
-                Instruction::SLTI(1, 2, (-2048i32 as u32))
+                Instruction::SLTI(1, 2, -2048i32 as u32)
             );
         }
 
@@ -447,7 +447,7 @@ mod test {
         fn test_sltiu() {
             assert_eq!(
                 Instruction::new(0b1000000_00000_00010_011_00001_0010011),
-                Instruction::SLTIU(1, 2, (-2048i32 as u32))
+                Instruction::SLTIU(1, 2, -2048i32 as u32)
             );
         }
 
@@ -455,7 +455,7 @@ mod test {
         fn test_andi() {
             assert_eq!(
                 Instruction::new(0b1000000_00000_00010_100_00001_0010011),
-                Instruction::XORI(1, 2, (-2048i32 as u32))
+                Instruction::XORI(1, 2, -2048i32 as u32)
             );
         }
 
@@ -463,7 +463,7 @@ mod test {
         fn test_ori() {
             assert_eq!(
                 Instruction::new(0b1000000_00000_00010_110_00001_0010011),
-                Instruction::ORI(1, 2, (-2048i32 as u32))
+                Instruction::ORI(1, 2, -2048i32 as u32)
             );
         }
 
@@ -471,7 +471,7 @@ mod test {
         fn test_xori() {
             assert_eq!(
                 Instruction::new(0b1000000_00000_00010_111_00001_0010011),
-                Instruction::ANDI(1, 2, (-2048i32 as u32))
+                Instruction::ANDI(1, 2, -2048i32 as u32)
             );
         }
 

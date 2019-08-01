@@ -50,7 +50,7 @@ impl<'a> Cpu<'a> {
                 self.set_register(rd, imm << 12);
             }
             Instruction::AUIPC(rd, imm) => {
-                let result = self.pc + imm << 12;
+                let result = self.pc + (imm << 12);
                 self.set_register(rd, result)
             }
             Instruction::JAL(rd, imm) => {
@@ -102,12 +102,12 @@ impl<'a> Cpu<'a> {
             Instruction::LB(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
                 let byte = self.memory.read_byte(addr);
-                self.set_register(rd, util::sign_extend(byte as i32, 8) as u32)
+                self.set_register(rd, util::sign_extend(i32::from(byte), 8) as u32)
             }
             Instruction::LH(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
                 let halfword = self.memory.read_halfword(addr);
-                self.set_register(rd, util::sign_extend(halfword as i32, 16) as u32)
+                self.set_register(rd, util::sign_extend(i32::from(halfword), 16) as u32)
             }
             Instruction::LW(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
@@ -117,12 +117,12 @@ impl<'a> Cpu<'a> {
             Instruction::LBU(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
                 let byte = self.memory.read_byte(addr);
-                self.set_register(rd, byte as u32)
+                self.set_register(rd, u32::from(byte))
             }
             Instruction::LHU(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
                 let halfword = self.memory.read_halfword(addr);
-                self.set_register(rd, halfword as u32)
+                self.set_register(rd, u32::from(halfword))
             }
             Instruction::SB(rs1, rs2, imm) => {
                 let addr = self.calculate_address(rs1, imm);
@@ -337,7 +337,7 @@ mod test {
 
             cpu.execute_instruction(Instruction::JAL(1, offset as u32));
             assert_eq!(cpu.get_register(1), 84);
-            assert_eq!(cpu.pc, (80 + offset * 2) as u32);
+            assert_eq!(cpu.pc, (80 + offset * 2 - 4) as u32);
         }
 
         t(16);
@@ -354,7 +354,7 @@ mod test {
 
             cpu.execute_instruction(Instruction::JALR(1, 2, offset as u32));
             assert_eq!(cpu.get_register(1), 84);
-            assert_eq!(cpu.pc, ((base as i32 + offset) as u32) & !1u32);
+            assert_eq!(cpu.pc, ((base as i32 + offset - 4) as u32) & !1u32);
         }
 
         t(400, 4);
@@ -377,7 +377,7 @@ mod test {
             cpu.execute_instruction(Instruction::$instr(2, 3, $offset));
 
             if $expect_jump {
-                assert_eq!((80i32).wrapping_add(2 * $offset) as u32, cpu.pc);
+                assert_eq!((80i32).wrapping_add(2 * $offset) as u32 - 4, cpu.pc);
             } else {
                 assert_eq!(cpu.pc, 80);
             }

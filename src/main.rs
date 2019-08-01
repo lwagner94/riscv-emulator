@@ -1,6 +1,6 @@
 use std::env;
 
-use crate::addressspace::{AddressSpace, MemoryDevice};
+use crate::addressspace::{AddressSpace};
 use crate::cpu::Cpu;
 
 mod addressspace;

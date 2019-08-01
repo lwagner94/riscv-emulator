@@ -26,7 +26,7 @@ impl AddressSpace {
 
 impl MemoryDevice for AddressSpace {
     fn read_byte(&self, address: Address) -> u8 {
-        return self.memory[address as usize];
+        self.memory[address as usize]
     }
 
     fn read_halfword(&self, address: Address) -> u16 {
@@ -40,9 +40,8 @@ impl MemoryDevice for AddressSpace {
     }
 
     fn write_byte(&mut self, address: Address, val: u8) {
-        if address == 0xcafebabe {
+        if address == 0xcafe_babe {
             print!("{}", val as char);
-
             return;
         }
         self.memory[address as usize] = val;
