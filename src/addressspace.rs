@@ -1,5 +1,6 @@
 use crate::util;
 use std::io::Write;
+use crate::instruction::Instruction;
 
 pub type Address = u32;
 
@@ -15,12 +16,25 @@ pub trait MemoryDevice {
 
 pub struct AddressSpace {
     memory: Vec<u8>,
+    instruction_buffer: Vec<Instruction>
 }
 
 impl AddressSpace {
     pub fn new() -> Self {
         AddressSpace {
             memory: vec![0; 1024 * 1024], // 1MB for now
+            instruction_buffer: vec![]
+        }
+    }
+
+    pub fn read_instruction(&self, address: Address) -> Instruction {
+        self.instruction_buffer[address as usize].clone()
+    }
+
+    pub fn init_instruction_buffer(&mut self, n_bytes: u32) {
+        for i in 0..n_bytes {
+            let instruction = Instruction::new(self.read_word(i));
+            self.instruction_buffer.push(instruction);
         }
     }
 }

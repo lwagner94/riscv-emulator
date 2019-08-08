@@ -31,11 +31,8 @@ impl<'a> Cpu<'a> {
     }
 
     pub fn step(&mut self) {
-        let encoded_instruction = self.memory.read_word(self.pc);
-        let instruction = Instruction::new(encoded_instruction);
-
 //        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
-
+        let instruction = self.memory.read_instruction(self.pc);
         self.execute_instruction(instruction);
         self.pc += 4;
         self.cycle_counter += 1;
@@ -63,6 +60,7 @@ impl<'a> Cpu<'a> {
     }
 
     pub fn execute_instruction(&mut self, instruction: Instruction) {
+
         match instruction {
             Instruction::LUI(rd, imm) => {
                 self.set_register(rd, imm << 12);

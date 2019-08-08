@@ -22,6 +22,7 @@ fn main() {
 
     let mut memory = AddressSpace::new();
     loader::load_program(&args.path, &mut memory).unwrap();
+    memory.init_instruction_buffer(0x1000);
     let mut cpu = Cpu::new(&mut memory);
 
     if args.debug_enabled {

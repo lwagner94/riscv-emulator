@@ -7,7 +7,7 @@ const FUNCT3_MASK: u32 = 0b111;
 const IMMEDIATE_20_MASK: u32 = 0b1111_1111_1111_1111_1111;
 const IMMEDIATE_12_MASK: u32 = 0b1111_1111_1111;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Instruction {
     LUI(usize, u32),
     AUIPC(usize, u32),
