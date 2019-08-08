@@ -4,3 +4,4 @@ programs/
 .idea/
 /target
 **/*.rs.bk
+callgrind.out.*

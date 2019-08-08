@@ -1,4 +1,5 @@
 use std::env;
+use std::time::SystemTime;
 use clap::{Arg, App, ArgMatches};
 
 use crate::addressspace::{AddressSpace, MemoryDevice};
@@ -27,7 +28,20 @@ fn main() {
         gdbserver::start_server(cpu);
     }
     else {
+        let before = SystemTime::now();
         cpu.run();
+        let after = SystemTime::now();
+
+        let elapsed = after.duration_since(before).unwrap().as_micros();
+        eprintln!(
+            "\nExecuted {} instructions in {:?} µs",
+            cpu.get_cycle_counter(), elapsed
+        );
+        eprintln!(
+            "Frequency: {} MHz",
+            (cpu.get_cycle_counter() as f64 / elapsed as f64)
+        );
+
     }
 }
 

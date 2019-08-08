@@ -8,7 +8,8 @@ pub struct Cpu<'a> {
     registers: [u32; 32],
     pc: u32,
     running: bool,
-    breakpoints: HashSet<u32>
+    breakpoints: HashSet<u32>,
+    cycle_counter: u64
 }
 
 impl<'a> Cpu<'a> {
@@ -18,7 +19,8 @@ impl<'a> Cpu<'a> {
             registers: [0u32; 32],
             pc: 0u32,
             running: true,
-            breakpoints: HashSet::new()
+            breakpoints: HashSet::new(),
+            cycle_counter: 0
         }
     }
 
@@ -32,10 +34,11 @@ impl<'a> Cpu<'a> {
         let encoded_instruction = self.memory.read_word(self.pc);
         let instruction = Instruction::new(encoded_instruction);
 
-        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
+//        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
 
         self.execute_instruction(instruction);
         self.pc += 4;
+        self.cycle_counter += 1;
     }
 
     pub fn cont(&mut self) {
@@ -292,6 +295,10 @@ impl<'a> Cpu<'a> {
 
     pub fn remove_breakpoint(&mut self, address: u32) {
         self.breakpoints.remove(&address);
+    }
+
+    pub fn get_cycle_counter(&self) -> u64 {
+        self.cycle_counter
     }
 }
 
