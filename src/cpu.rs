@@ -31,7 +31,12 @@ impl Cpu {
 
     pub fn step(&mut self, memory: &mut AddressSpace) {
 //        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
-        let instruction = memory.read_instruction(self.pc);
+        let instruction_ptr = memory.read_instruction(self.pc);
+        let instruction;
+        unsafe {
+            instruction = &*instruction_ptr;
+        }
+
         self.execute_instruction(instruction, memory);
         self.pc += 4;
         self.cycle_counter += 1;
@@ -58,9 +63,9 @@ impl Cpu {
         (self.get_register(base_reg) as i32).wrapping_add(offset) as u32
     }
 
-    pub fn execute_instruction(&mut self, instruction: Instruction, memory: &mut AddressSpace) {
+    pub fn execute_instruction(&mut self, instruction: &Instruction, memory: &mut AddressSpace) {
 
-        match instruction {
+        match *instruction {
             Instruction::LUI(rd, imm) => {
                 self.set_register(rd, imm << 12);
             }
@@ -306,7 +311,7 @@ mod test {
             let mut cpu = Cpu::new();
             cpu.set_register(2, $first as u32);
 
-            cpu.execute_instruction(Instruction::$instr(1, 2, $second as u32), &mut memory);
+            cpu.execute_instruction(&Instruction::$instr(1, 2, $second as u32), &mut memory);
             assert_eq!(cpu.get_register(1), $result);
         }};
     }
@@ -318,7 +323,7 @@ mod test {
             cpu.set_register(2, $first as u32);
             cpu.set_register(3, $second as u32);
 
-            cpu.execute_instruction(Instruction::$instr(1, 2, 3), &mut memory);
+            cpu.execute_instruction(&Instruction::$instr(1, 2, 3), &mut memory);
             assert_eq!(cpu.get_register(1), $result as u32);
         }};
     }
@@ -371,7 +376,7 @@ mod test {
             let mut cpu = Cpu::new();
             cpu.pc = 80;
 
-            cpu.execute_instruction(Instruction::JAL(1, offset as u32), &mut memory);
+            cpu.execute_instruction(&Instruction::JAL(1, offset as u32), &mut memory);
             assert_eq!(cpu.get_register(1), 84);
             assert_eq!(cpu.pc, (80 + offset * 2 - 4) as u32);
         }
@@ -388,7 +393,7 @@ mod test {
             cpu.set_register(2, base);
             cpu.pc = 80;
 
-            cpu.execute_instruction(Instruction::JALR(1, 2, offset as u32), &mut memory);
+            cpu.execute_instruction(&Instruction::JALR(1, 2, offset as u32), &mut memory);
             assert_eq!(cpu.get_register(1), 84);
             assert_eq!(cpu.pc, ((base as i32 + offset - 4) as u32) & !1u32);
         }
@@ -410,7 +415,7 @@ mod test {
             cpu.set_register(3, second);
             cpu.pc = 80;
 
-            cpu.execute_instruction(Instruction::$instr(2, 3, $offset), &mut memory);
+            cpu.execute_instruction(&Instruction::$instr(2, 3, $offset), &mut memory);
 
             if $expect_jump {
                 assert_eq!((80i32).wrapping_add(2 * $offset) as u32 - 4, cpu.pc);
@@ -460,7 +465,7 @@ mod test {
 
         cpu.set_register(1, 0xF0);
         cpu.set_register(2, 0xCAFEBABE);
-        cpu.execute_instruction(Instruction::SB(1, 2, 16), &mut memory);
+        cpu.execute_instruction(&Instruction::SB(1, 2, 16), &mut memory);
         assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
         assert_eq!(0xBE, memory.read_byte(0xF0 + 16));
         assert_eq!(0, memory.read_byte(0xF0 + 16 + 1));
@@ -473,7 +478,7 @@ mod test {
 
         cpu.set_register(1, 0xF0);
         cpu.set_register(2, 0xCAFEBABE);
-        cpu.execute_instruction(Instruction::SH(1, 2, 16), &mut memory);
+        cpu.execute_instruction(&Instruction::SH(1, 2, 16), &mut memory);
         assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
         assert_eq!(0xBABE, memory.read_halfword(0xF0 + 16));
         assert_eq!(0, memory.read_byte(0xF0 + 16 + 3));
@@ -486,7 +491,7 @@ mod test {
 
         cpu.set_register(1, 0xF0);
         cpu.set_register(2, 0xCAFEBABE);
-        cpu.execute_instruction(Instruction::SW(1, 2, 16), &mut memory);
+        cpu.execute_instruction(&Instruction::SW(1, 2, 16), &mut memory);
         assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
         assert_eq!(0xCAFEBABE, memory.read_word(0xF0 + 16));
         assert_eq!(0, memory.read_byte(0xF0 + 16 + 5));
@@ -499,7 +504,7 @@ mod test {
             let mut cpu = Cpu::new();
 
             cpu.set_register(2, 0xF0);
-            cpu.execute_instruction(Instruction::$instr(1, 2, 16), &mut memory);
+            cpu.execute_instruction(&Instruction::$instr(1, 2, 16), &mut memory);
             assert_eq!(cpu.get_register(1), $expected);
         }};
     }

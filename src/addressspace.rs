@@ -27,8 +27,8 @@ impl AddressSpace {
         }
     }
 
-    pub fn read_instruction(&self, address: Address) -> Instruction {
-        self.instruction_buffer[address as usize].clone()
+    pub fn read_instruction(&self, address: Address) -> *const Instruction {
+        &self.instruction_buffer[address as usize] as *const Instruction
     }
 
     pub fn init_instruction_buffer(&mut self, n_bytes: u32) {
