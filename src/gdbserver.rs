@@ -6,15 +6,17 @@ use std::cell::RefCell;
 use crate::Cpu;
 use crate::util;
 use crate::addressspace::MemoryDevice;
+use crate::AddressSpace;
 
 
 const BIND_ADDRESS: &'static str = "0.0.0.0:3000";
 
-struct NoopHandler<'a> {
-    cpu: RefCell<Cpu<'a>>
+struct NoopHandler {
+    cpu: RefCell<Cpu>,
+    memory: RefCell<AddressSpace>
 }
 
-impl<'a> Handler for NoopHandler<'a> {
+impl<'a> Handler for NoopHandler {
     fn query_supported_features(&self) -> Vec<String> {
         let mut v = vec!();
         v
@@ -34,10 +36,10 @@ impl<'a> Handler for NoopHandler<'a> {
     }
 
     fn read_memory(&self, region: MemoryRegion) -> Result<Vec<u8>, Error> {
-        let cpu = self.cpu.borrow();
+        let mut memory = self.memory.borrow_mut();
         let mut memory_content = Vec::with_capacity(region.length as usize);
         for address in region.address .. region.address + region.length {
-            memory_content.push(cpu.get_memory().read_byte(address as u32));
+            memory_content.push(memory.read_byte(address as u32));
         }
 
         Ok(memory_content)
@@ -160,19 +162,21 @@ impl<'a> Handler for NoopHandler<'a> {
 
     fn step(&self) -> Result<StopReason, Error> {
         let mut cpu = self.cpu.borrow_mut();
-        cpu.step();
+        let mut memory = self.memory.borrow_mut();
+        cpu.step(&mut memory);
         Ok(StopReason::Signal(5))
     }
 
     fn cont(&self) -> Result<StopReason, Error> {
         let mut cpu = self.cpu.borrow_mut();
-        cpu.cont();
+        let mut memory = self.memory.borrow_mut();
+        cpu.cont(&mut memory);
         Ok(StopReason::Signal(5))
     }
 }
 
 
-pub fn start_server(cpu: Cpu) {
+pub fn start_server(cpu: Cpu, memory: AddressSpace) {
 //    drop(env_logger::init());
     let listener = TcpListener::bind(BIND_ADDRESS).unwrap();
     eprintln!("Listening on {}", BIND_ADDRESS);
@@ -181,7 +185,8 @@ pub fn start_server(cpu: Cpu) {
     eprintln!("Got connection");
     if let Ok(stream) = res {
         let h = NoopHandler {
-            cpu: RefCell::new(cpu)
+            cpu: RefCell::new(cpu),
+            memory: RefCell::new(memory)
         };
         process_packets_from(stream.try_clone().unwrap(), stream, h);
     }

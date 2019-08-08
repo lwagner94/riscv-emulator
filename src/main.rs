@@ -23,14 +23,14 @@ fn main() {
     let mut memory = AddressSpace::new();
     loader::load_program(&args.path, &mut memory).unwrap();
     memory.init_instruction_buffer(0x1000);
-    let mut cpu = Cpu::new(&mut memory);
+    let mut cpu = Cpu::new();
 
     if args.debug_enabled {
-        gdbserver::start_server(cpu);
+        gdbserver::start_server(cpu, memory);
     }
     else {
         let before = SystemTime::now();
-        cpu.run();
+        cpu.run(&mut memory);
         let after = SystemTime::now();
 
         let elapsed = after.duration_since(before).unwrap().as_micros();

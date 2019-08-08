@@ -3,8 +3,8 @@ use crate::instruction::Instruction;
 use crate::util;
 use std::collections::HashSet;
 
-pub struct Cpu<'a> {
-    memory: &'a mut AddressSpace,
+pub struct Cpu {
+//    memory: &'a mut AddressSpace,
     registers: [u32; 32],
     pc: u32,
     running: bool,
@@ -12,10 +12,9 @@ pub struct Cpu<'a> {
     cycle_counter: u64
 }
 
-impl<'a> Cpu<'a> {
-    pub fn new(memory: &'a mut AddressSpace) -> Cpu<'a> {
+impl Cpu {
+    pub fn new() -> Cpu {
         Self {
-            memory,
             registers: [0u32; 32],
             pc: 0u32,
             running: true,
@@ -24,24 +23,24 @@ impl<'a> Cpu<'a> {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self, memory: &mut AddressSpace) {
         while self.running {
-            self.step();
+            self.step(memory);
         }
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self, memory: &mut AddressSpace) {
 //        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
-        let instruction = self.memory.read_instruction(self.pc);
-        self.execute_instruction(instruction);
+        let instruction = memory.read_instruction(self.pc);
+        self.execute_instruction(instruction, memory);
         self.pc += 4;
         self.cycle_counter += 1;
     }
 
-    pub fn cont(&mut self) {
+    pub fn cont(&mut self, memory: &mut AddressSpace) {
         let mut breakpoint_hit = false;
         while self.running && !breakpoint_hit {
-            self.step();
+            self.step(memory);
             breakpoint_hit = self.breakpoints.contains(&self.pc);
         }
     }
@@ -59,7 +58,7 @@ impl<'a> Cpu<'a> {
         (self.get_register(base_reg) as i32).wrapping_add(offset) as u32
     }
 
-    pub fn execute_instruction(&mut self, instruction: Instruction) {
+    pub fn execute_instruction(&mut self, instruction: Instruction, memory: &mut AddressSpace) {
 
         match instruction {
             Instruction::LUI(rd, imm) => {
@@ -117,41 +116,41 @@ impl<'a> Cpu<'a> {
             }
             Instruction::LB(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
-                let byte = self.memory.read_byte(addr);
+                let byte = memory.read_byte(addr);
                 self.set_register(rd, util::sign_extend(i32::from(byte), 8) as u32)
             }
             Instruction::LH(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
-                let halfword = self.memory.read_halfword(addr);
+                let halfword = memory.read_halfword(addr);
                 self.set_register(rd, util::sign_extend(i32::from(halfword), 16) as u32)
             }
             Instruction::LW(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
-                let word = self.memory.read_word(addr);
+                let word = memory.read_word(addr);
                 self.set_register(rd, word)
             }
             Instruction::LBU(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
-                let byte = self.memory.read_byte(addr);
+                let byte = memory.read_byte(addr);
                 self.set_register(rd, u32::from(byte))
             }
             Instruction::LHU(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
-                let halfword = self.memory.read_halfword(addr);
+                let halfword = memory.read_halfword(addr);
                 self.set_register(rd, u32::from(halfword))
             }
             Instruction::SB(rs1, rs2, imm) => {
                 let addr = self.calculate_address(rs1, imm);
-                self.memory.write_byte(addr, self.get_register(rs2) as u8)
+                memory.write_byte(addr, self.get_register(rs2) as u8)
             }
             Instruction::SH(rs1, rs2, imm) => {
                 let addr = self.calculate_address(rs1, imm);
-                self.memory
+                memory
                     .write_halfword(addr, self.get_register(rs2) as u16)
             }
             Instruction::SW(rs1, rs2, imm) => {
                 let addr = self.calculate_address(rs1, imm);
-                self.memory.write_word(addr, self.get_register(rs2) as u32)
+                memory.write_word(addr, self.get_register(rs2) as u32)
             }
             Instruction::ADDI(rd, rs1, imm) => {
                 let v1 = self.get_register(rs1) as i32;
@@ -283,9 +282,6 @@ impl<'a> Cpu<'a> {
         self.pc = value;
     }
 
-    pub fn get_memory(&self) -> &AddressSpace {
-        self.memory
-    }
 
     pub fn add_breakpoint(&mut self, address: u32) {
         self.breakpoints.insert(address);
@@ -307,10 +303,10 @@ mod test {
     macro_rules! immediate_test {
         ($instr:ident, $first:expr, $second:expr, $result:expr) => {{
             let mut memory = AddressSpace::new();
-            let mut cpu = Cpu::new(&mut memory);
+            let mut cpu = Cpu::new();
             cpu.set_register(2, $first as u32);
 
-            cpu.execute_instruction(Instruction::$instr(1, 2, $second as u32));
+            cpu.execute_instruction(Instruction::$instr(1, 2, $second as u32), &mut memory);
             assert_eq!(cpu.get_register(1), $result);
         }};
     }
@@ -318,11 +314,11 @@ mod test {
     macro_rules! register_test {
         ($instr:ident, $first:expr, $second:expr, $result:expr) => {{
             let mut memory = AddressSpace::new();
-            let mut cpu = Cpu::new(&mut memory);
+            let mut cpu = Cpu::new();
             cpu.set_register(2, $first as u32);
             cpu.set_register(3, $second as u32);
 
-            cpu.execute_instruction(Instruction::$instr(1, 2, 3));
+            cpu.execute_instruction(Instruction::$instr(1, 2, 3), &mut memory);
             assert_eq!(cpu.get_register(1), $result as u32);
         }};
     }
@@ -372,10 +368,10 @@ mod test {
     fn test_jal() {
         fn t(offset: i32) {
             let mut memory = AddressSpace::new();
-            let mut cpu = Cpu::new(&mut memory);
+            let mut cpu = Cpu::new();
             cpu.pc = 80;
 
-            cpu.execute_instruction(Instruction::JAL(1, offset as u32));
+            cpu.execute_instruction(Instruction::JAL(1, offset as u32), &mut memory);
             assert_eq!(cpu.get_register(1), 84);
             assert_eq!(cpu.pc, (80 + offset * 2 - 4) as u32);
         }
@@ -388,11 +384,11 @@ mod test {
     fn test_jalr() {
         fn t(base: u32, offset: i32) {
             let mut memory = AddressSpace::new();
-            let mut cpu = Cpu::new(&mut memory);
+            let mut cpu = Cpu::new();
             cpu.set_register(2, base);
             cpu.pc = 80;
 
-            cpu.execute_instruction(Instruction::JALR(1, 2, offset as u32));
+            cpu.execute_instruction(Instruction::JALR(1, 2, offset as u32), &mut memory);
             assert_eq!(cpu.get_register(1), 84);
             assert_eq!(cpu.pc, ((base as i32 + offset - 4) as u32) & !1u32);
         }
@@ -409,12 +405,12 @@ mod test {
             let second = $second as u32;
 
             let mut memory = AddressSpace::new();
-            let mut cpu = Cpu::new(&mut memory);
+            let mut cpu = Cpu::new();
             cpu.set_register(2, first);
             cpu.set_register(3, second);
             cpu.pc = 80;
 
-            cpu.execute_instruction(Instruction::$instr(2, 3, $offset));
+            cpu.execute_instruction(Instruction::$instr(2, 3, $offset), &mut memory);
 
             if $expect_jump {
                 assert_eq!((80i32).wrapping_add(2 * $offset) as u32 - 4, cpu.pc);
@@ -460,11 +456,11 @@ mod test {
     #[test]
     fn test_byte_store() {
         let mut memory = AddressSpace::new();
-        let mut cpu = Cpu::new(&mut memory);
+        let mut cpu = Cpu::new();
 
         cpu.set_register(1, 0xF0);
         cpu.set_register(2, 0xCAFEBABE);
-        cpu.execute_instruction(Instruction::SB(1, 2, 16));
+        cpu.execute_instruction(Instruction::SB(1, 2, 16), &mut memory);
         assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
         assert_eq!(0xBE, memory.read_byte(0xF0 + 16));
         assert_eq!(0, memory.read_byte(0xF0 + 16 + 1));
@@ -473,11 +469,11 @@ mod test {
     #[test]
     fn test_halfword_store() {
         let mut memory = AddressSpace::new();
-        let mut cpu = Cpu::new(&mut memory);
+        let mut cpu = Cpu::new();
 
         cpu.set_register(1, 0xF0);
         cpu.set_register(2, 0xCAFEBABE);
-        cpu.execute_instruction(Instruction::SH(1, 2, 16));
+        cpu.execute_instruction(Instruction::SH(1, 2, 16), &mut memory);
         assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
         assert_eq!(0xBABE, memory.read_halfword(0xF0 + 16));
         assert_eq!(0, memory.read_byte(0xF0 + 16 + 3));
@@ -486,11 +482,11 @@ mod test {
     #[test]
     fn test_word_store() {
         let mut memory = AddressSpace::new();
-        let mut cpu = Cpu::new(&mut memory);
+        let mut cpu = Cpu::new();
 
         cpu.set_register(1, 0xF0);
         cpu.set_register(2, 0xCAFEBABE);
-        cpu.execute_instruction(Instruction::SW(1, 2, 16));
+        cpu.execute_instruction(Instruction::SW(1, 2, 16), &mut memory);
         assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
         assert_eq!(0xCAFEBABE, memory.read_word(0xF0 + 16));
         assert_eq!(0, memory.read_byte(0xF0 + 16 + 5));
@@ -500,10 +496,10 @@ mod test {
         ($instr:ident,  $memop:ident, $value:expr, $expected:expr) => {{
             let mut memory = AddressSpace::new();
             memory.$memop(0xF0 + 16, $value);
-            let mut cpu = Cpu::new(&mut memory);
+            let mut cpu = Cpu::new();
 
             cpu.set_register(2, 0xF0);
-            cpu.execute_instruction(Instruction::$instr(1, 2, 16));
+            cpu.execute_instruction(Instruction::$instr(1, 2, 16), &mut memory);
             assert_eq!(cpu.get_register(1), $expected);
         }};
     }
@@ -533,8 +529,7 @@ mod test {
 
     #[test]
     fn test_register() {
-        let mut memory = AddressSpace::new();
-        let mut cpu = Cpu::new(&mut memory);
+        let mut cpu = Cpu::new();
 
         cpu.set_register(1, 0xCAFEBABE);
         assert_eq!(cpu.get_register(1), 0xCAFEBABE);
