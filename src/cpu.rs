@@ -1,12 +1,14 @@
 use crate::addressspace::{AddressSpace, MemoryDevice};
 use crate::instruction::Instruction;
 use crate::util;
+use std::collections::HashSet;
 
 pub struct Cpu<'a> {
     memory: &'a mut AddressSpace,
     registers: [u32; 32],
     pc: u32,
     running: bool,
+    breakpoints: HashSet<u32>
 }
 
 impl<'a> Cpu<'a> {
@@ -16,18 +18,31 @@ impl<'a> Cpu<'a> {
             registers: [0u32; 32],
             pc: 0u32,
             running: true,
+            breakpoints: HashSet::new()
         }
     }
 
     pub fn run(&mut self) {
         while self.running {
-            let encoded_instruction = self.memory.read_word(self.pc);
-            let instruction = Instruction::new(encoded_instruction);
+            self.step();
+        }
+    }
 
-            eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
+    pub fn step(&mut self) {
+        let encoded_instruction = self.memory.read_word(self.pc);
+        let instruction = Instruction::new(encoded_instruction);
 
-            self.execute_instruction(instruction);
-            self.pc += 4;
+        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
+
+        self.execute_instruction(instruction);
+        self.pc += 4;
+    }
+
+    pub fn cont(&mut self) {
+        let mut breakpoint_hit = false;
+        while self.running && !breakpoint_hit {
+            self.step();
+            breakpoint_hit = self.breakpoints.contains(&self.pc);
         }
     }
 
@@ -257,6 +272,26 @@ impl<'a> Cpu<'a> {
         if num != 0 {
             self.registers[num] = value
         }
+    }
+
+    pub fn get_pc(&self) -> u32 {
+        self.pc
+    }
+
+    pub fn set_pc(&mut self, value: u32) {
+        self.pc = value;
+    }
+
+    pub fn get_memory(&self) -> &AddressSpace {
+        self.memory
+    }
+
+    pub fn add_breakpoint(&mut self, address: u32) {
+        self.breakpoints.insert(address);
+    }
+
+    pub fn remove_breakpoint(&mut self, address: u32) {
+        self.breakpoints.remove(&address);
     }
 }
 

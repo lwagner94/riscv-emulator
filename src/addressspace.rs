@@ -1,4 +1,5 @@
 use crate::util;
+use std::io::Write;
 
 pub type Address = u32;
 
@@ -42,6 +43,7 @@ impl MemoryDevice for AddressSpace {
     fn write_byte(&mut self, address: Address, val: u8) {
         if address == 0xcafe_babe {
             print!("{}", val as char);
+            std::io::stdout().flush();
             return;
         }
         self.memory[address as usize] = val;
