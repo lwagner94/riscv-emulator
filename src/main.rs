@@ -25,8 +25,6 @@ fn main() {
     loader::load_program(&args.path, &mut memory).unwrap();
     let mut cpu = Cpu::new();
 
-
-
     if args.debug_enabled {
         gdbserver::start_server(cpu, memory);
     }
@@ -76,3 +74,4 @@ fn parse_commandline() -> CommandLineArgs {
         debug_enabled
     }
 }
+

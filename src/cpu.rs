@@ -273,10 +273,75 @@ impl Cpu {
                 let result = v1 & v2;
                 self.set_register(rd, result);
             }
+            Instruction::MUL(rd, rs1, rs2) => {
+                let v1 = self.get_register(rs1) as u64;
+                let v2 = self.get_register(rs2) as u64;
+                let result = v1 * v2;
+                self.set_register(rd, result as u32);
+            }
+            Instruction::MULH(rd, rs1, rs2) => {
+                let v1 = self.get_register(rs1) as i32 as i64;
+                let v2 = self.get_register(rs2) as i32 as i64;
+                let result = v1 * v2;
+                self.set_register(rd, (result >> 32) as u32);
+            }
+            Instruction::MULHSU(rd, rs1, rs2) => {
+                let v1 = self.get_register(rs1) as i32 as i64;
+                let v2 = self.get_register(rs2) as i64;
+                let result = v1 * v2;
+                self.set_register(rd, (result >> 32) as u32);
+            }
+            Instruction::MULHU(rd, rs1, rs2) => {
+                let v1 = self.get_register(rs1) as u64;
+                let v2 = self.get_register(rs2) as u64;
+                let result = v1 * v2;
+                self.set_register(rd, (result >> 32) as u32);
+            }
+            Instruction::DIV(rd, rs1, rs2) => {
+                let v1 = self.get_register(rs1) as i32 as i64;
+                let v2 = self.get_register(rs2) as i32 as i64;
+                let result = if v2 == 0 {
+                    -1
+                } else {
+                    v1 / v2
+                };
+                self.set_register(rd, result as u32);
+            }
+            Instruction::DIVU(rd, rs1, rs2) => {
+                let v1 = self.get_register(rs1);
+                let v2 = self.get_register(rs2);
+                let result = if v2 == 0 {
+                    -1i32 as u32
+                } else {
+                    v1 / v2
+                };
+                self.set_register(rd, result);
+            }
+            Instruction::REM(rd, rs1, rs2) => {
+                let v1 = self.get_register(rs1) as i32 as i64;
+                let v2 = self.get_register(rs2) as i32 as i64;
+                let result = if v2 == 0 {
+                    v1
+                } else {
+                    v1 % v2
+                };
+                self.set_register(rd, result as u32);
+            }
+            Instruction::REMU(rd, rs1, rs2) => {
+                let v1 = self.get_register(rs1);
+                let v2 = self.get_register(rs2);
+                let result = if v2 == 0 {
+                    v1
+                } else {
+                    v1 % v2
+                };
+                self.set_register(rd, result);
+            }
             Instruction::EBREAK => {
                 self.running = false;
             }
             Instruction::INVALID => panic!("Invalid Instruction detected"),
+            _ => panic!("Instruction {:?} not implemented", instruction)
         }
     }
 
@@ -341,6 +406,18 @@ mod test {
         }};
     }
 
+    macro_rules! register_test_new {
+        ($instr:ident, $result:expr, $first:expr, $second:expr) => {{
+            let mut memory = AddressSpace::new();
+            let mut cpu = Cpu::new();
+            cpu.set_register(2, $first as u32);
+            cpu.set_register(3, $second as u32);
+
+            cpu.execute_instruction(&Instruction::$instr(1, 2, 3), &mut memory);
+            assert_eq!(cpu.get_register(1), $result as u32);
+        }};
+    }
+
     #[test]
     fn test_immediate() {
         immediate_test!(ADDI, 10, 20, 30);
@@ -380,6 +457,124 @@ mod test {
         register_test!(SLTU, 0, 0, 0);
         register_test!(SLTU, -1i32, 0, 0);
         register_test!(SLTU, 0, 1, 1);
+    }
+
+    #[test]
+    fn test_mul() {
+        register_test_new!(MUL, 0x00001200, 0x00007e00, 0xb6db6db7);
+        register_test_new!(MUL, 0x00001240, 0x00007fc0, 0xb6db6db7);
+        register_test_new!(MUL, 0x00000000, 0x00000000, 0x00000000);
+        register_test_new!(MUL, 0x00000001, 0x00000001, 0x00000001);
+        register_test_new!(MUL, 0x00000015, 0x00000003, 0x00000007);
+        register_test_new!(MUL, 0x00000000, 0x00000000, 0xffff8000);
+        register_test_new!(MUL, 0x00000000, 0x80000000, 0x00000000);
+        register_test_new!(MUL, 0x00000000, 0x80000000, 0xffff8000);
+        register_test_new!(MUL, 0x0000ff7f, 0xaaaaaaab, 0x0002fe7d);
+        register_test_new!(MUL, 0x0000ff7f, 0x0002fe7d, 0xaaaaaaab);
+        register_test_new!(MUL, 0x00000000, 0xff000000, 0xff000000);
+        register_test_new!(MUL, 0x00000001, 0xffffffff, 0xffffffff);
+        register_test_new!(MUL, 0xffffffff, 0xffffffff, 0x00000001);
+        register_test_new!(MUL, 0xffffffff, 0x00000001, 0xffffffff);
+    }
+
+    #[test]
+    fn test_mulh() {
+        register_test_new!(MULH, 0x00000000, 0x00000000, 0x00000000);
+        register_test_new!(MULH, 0x00000000, 0x00000001, 0x00000001);
+        register_test_new!(MULH, 0x00000000, 0x00000003, 0x00000007);
+        register_test_new!(MULH, 0x00000000, 0x00000000, 0xffff8000);
+        register_test_new!(MULH, 0x00000000, 0x80000000, 0x00000000);
+        register_test_new!(MULH, 0x00000000, 0x80000000, 0x00000000);
+        register_test_new!(MULH, 0xffff0081, 0xaaaaaaab, 0x0002fe7d);
+        register_test_new!(MULH, 0xffff0081, 0x0002fe7d, 0xaaaaaaab);
+        register_test_new!(MULH, 0x00010000, 0xff000000, 0xff000000);
+        register_test_new!(MULH, 0x00000000, 0xffffffff, 0xffffffff);
+        register_test_new!(MULH, 0xffffffff, 0xffffffff, 0x00000001);
+        register_test_new!(MULH, 0xffffffff, 0x00000001, 0xffffffff);
+    }
+
+    #[test]
+    fn test_mulhu() {
+        register_test_new!(MULHU, 0x00000000, 0x00000000, 0x00000000);
+        register_test_new!(MULHU, 0x00000000, 0x00000001, 0x00000001);
+        register_test_new!(MULHU, 0x00000000, 0x00000003, 0x00000007);
+        register_test_new!(MULHU, 0x00000000, 0x00000000, 0xffff8000);
+        register_test_new!(MULHU, 0x00000000, 0x80000000, 0x00000000);
+        register_test_new!(MULHU, 0x7fffc000, 0x80000000, 0xffff8000);
+        register_test_new!(MULHU, 0x0001fefe, 0xaaaaaaab, 0x0002fe7d);
+        register_test_new!(MULHU, 0x0001fefe, 0x0002fe7d, 0xaaaaaaab);
+        register_test_new!(MULHU, 0xfe010000, 0xff000000, 0xff000000);
+        register_test_new!(MULHU, 0xfffffffe, 0xffffffff, 0xffffffff);
+        register_test_new!(MULHU, 0x00000000, 0xffffffff, 0x00000001);
+        register_test_new!(MULHU, 0x00000000, 0x00000001, 0xffffffff);
+    }
+
+    #[test]
+    fn test_mulhsu() {
+        register_test_new!(MULHSU, 0x00000000, 0x00000000, 0x00000000);
+        register_test_new!(MULHSU, 0x00000000, 0x00000001, 0x00000001);
+        register_test_new!(MULHSU, 0x00000000, 0x00000003, 0x00000007);
+        register_test_new!(MULHSU, 0x00000000, 0x00000000, 0xffff8000);
+        register_test_new!(MULHSU, 0x00000000, 0x80000000, 0x00000000);
+        register_test_new!(MULHSU, 0x80004000, 0x80000000, 0xffff8000);
+        register_test_new!(MULHSU, 0xffff0081, 0xaaaaaaab, 0x0002fe7d);
+        register_test_new!(MULHSU, 0x0001fefe, 0x0002fe7d, 0xaaaaaaab);
+        register_test_new!(MULHSU, 0xff010000, 0xff000000, 0xff000000);
+        register_test_new!(MULHSU, 0xffffffff, 0xffffffff, 0xffffffff);
+        register_test_new!(MULHSU, 0xffffffff, 0xffffffff, 0x00000001);
+        register_test_new!(MULHSU, 0x00000000, 0x00000001, 0xffffffff);
+    }
+
+    #[test]
+    fn test_div() {
+        register_test_new!(DIV,  3, 20, 6);
+        register_test_new!(DIV, -3i32, -20i32, 6);
+        register_test_new!(DIV, -3i32, 20, -6i32);
+        register_test_new!(DIV,  3, -20i32, -6i32);
+        register_test_new!(DIV, -1i32<<31, -1i32<<31,  1);
+        register_test_new!(DIV, -1i32<<31, -1i32<<31, -1i32);
+        register_test_new!(DIV, -1i32, -1i32<<31, 0);
+        register_test_new!(DIV, -1i32, 1, 0);
+        register_test_new!(DIV, -1i32, 0, 0);
+    }
+
+    #[test]
+    fn test_divu() {
+        register_test_new!(DIVU, 3, 20, 6);
+        register_test_new!(DIVU, 715827879, -20i32, 6);
+        register_test_new!(DIVU, 0, 20, -6i32);
+        register_test_new!(DIVU, 0, -20i32, -6i32);
+        register_test_new!(DIVU, -1i32<<31, -1i32<<31, 1);
+        register_test_new!(DIVU, 0, -1i32<<31, -1i32);
+        register_test_new!(DIVU, -1i32, -1<<31, 0);
+        register_test_new!(DIVU, -1i32, 1, 0);
+        register_test_new!(DIVU, -1i32, 0, 0);
+    }
+
+    #[test]
+    fn test_rem() {
+        register_test_new!(REM, 2, 20, 6);
+        register_test_new!(REM, -2i32, -20i32, 6);
+        register_test_new!(REM, 2, 20, -6i32);
+        register_test_new!(REM, -2i32, -20i32, -6i32);
+        register_test_new!(REM, 0, -1i32<<31,  1);
+        register_test_new!(REM, 0, -1i32<<31, -1i32);
+        register_test_new!(REM, -1i32<<31, -1i32<<31, 0);
+        register_test_new!(REM, 1, 1, 0);
+        register_test_new!(REM, 0, 0, 0);
+    }
+
+    #[test]
+    fn test_remu() {
+        register_test_new!(REMU,   2,  20,   6);
+        register_test_new!(REMU,   2, -20i32,   6);
+        register_test_new!(REMU,  20,  20,  -6i32);
+        register_test_new!(REMU, -20i32, -20i32,  -6i32);
+        register_test_new!(REMU,      0, -1i32<<31,  1);
+        register_test_new!(REMU, -1i32<<31, -1i32<<31, -1i32);
+        register_test_new!(REMU, -1i32<<31, -1i32<<31, 0);
+        register_test_new!(REMU,      1,      1, 0);
+        register_test_new!(REMU,      0,      0, 0);
     }
 
     #[test]
