@@ -2,14 +2,14 @@ use crate::addressspace::{AddressSpace, MemoryDevice};
 use crate::instruction::Instruction;
 use crate::util;
 use std::collections::HashSet;
+use std::collections::HashMap;
 
 pub struct Cpu {
-//    memory: &'a mut AddressSpace,
     registers: [u32; 32],
     pc: u32,
     running: bool,
     breakpoints: HashSet<u32>,
-    cycle_counter: u64
+    cycle_counter: u64,
 }
 
 impl Cpu {
@@ -19,25 +19,35 @@ impl Cpu {
             pc: 0u32,
             running: true,
             breakpoints: HashSet::new(),
-            cycle_counter: 0
+            cycle_counter: 0,
         }
     }
 
+    pub fn reset(&mut self) {
+        *self = Cpu::new();
+    }
+
     pub fn run(&mut self, memory: &mut AddressSpace) {
+        let mut instruction_cache: Vec<Instruction> = vec![Instruction::INVALID; 0x1000];
+
         while self.running {
-            self.step(memory);
+            if instruction_cache[self.pc as usize] == Instruction::INVALID {
+                instruction_cache[self.pc as usize] = Instruction::new(memory.read_word(self.pc));
+            }
+
+            let instruction = &instruction_cache[self.pc as usize];
+
+            self.execute_instruction(instruction, memory);
+            self.pc += 4;
+            self.cycle_counter += 1;
         }
     }
 
     pub fn step(&mut self, memory: &mut AddressSpace) {
 //        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
-        let instruction_ptr = memory.read_instruction(self.pc);
-        let instruction;
-        unsafe {
-            instruction = &*instruction_ptr;
-        }
+        let instruction = Instruction::new(memory.read_word(self.pc));
 
-        self.execute_instruction(instruction, memory);
+        self.execute_instruction(&instruction, memory);
         self.pc += 4;
         self.cycle_counter += 1;
     }
@@ -63,6 +73,7 @@ impl Cpu {
         (self.get_register(base_reg) as i32).wrapping_add(offset) as u32
     }
 
+    #[inline(always)]
     pub fn execute_instruction(&mut self, instruction: &Instruction, memory: &mut AddressSpace) {
 
         match *instruction {
@@ -269,10 +280,12 @@ impl Cpu {
         }
     }
 
+    #[inline(always)]
     pub fn get_register(&self, num: usize) -> u32 {
         self.registers[num]
     }
 
+    #[inline(always)]
     pub fn set_register(&mut self, num: usize, value: u32) {
         if num != 0 {
             self.registers[num] = value

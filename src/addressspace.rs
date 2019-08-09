@@ -16,43 +16,34 @@ pub trait MemoryDevice {
 
 pub struct AddressSpace {
     memory: Vec<u8>,
-    instruction_buffer: Vec<Instruction>
 }
 
 impl AddressSpace {
     pub fn new() -> Self {
         AddressSpace {
             memory: vec![0; 1024 * 1024], // 1MB for now
-            instruction_buffer: vec![]
-        }
-    }
-
-    pub fn read_instruction(&self, address: Address) -> *const Instruction {
-        &self.instruction_buffer[address as usize] as *const Instruction
-    }
-
-    pub fn init_instruction_buffer(&mut self, n_bytes: u32) {
-        for i in 0..n_bytes {
-            let instruction = Instruction::new(self.read_word(i));
-            self.instruction_buffer.push(instruction);
         }
     }
 }
 
 impl MemoryDevice for AddressSpace {
+
     fn read_byte(&self, address: Address) -> u8 {
         self.memory[address as usize]
     }
+
 
     fn read_halfword(&self, address: Address) -> u16 {
         let index = address as usize;
         util::read_u16_from_byteslice(&self.memory[index..index + 2])
     }
 
+
     fn read_word(&self, address: Address) -> u32 {
         let index = address as usize;
         util::read_u32_from_byteslice(&self.memory[index..index + 4])
     }
+
 
     fn write_byte(&mut self, address: Address, val: u8) {
         if address == 0xcafe_babe {
@@ -63,10 +54,12 @@ impl MemoryDevice for AddressSpace {
         self.memory[address as usize] = val;
     }
 
+
     fn write_halfword(&mut self, address: Address, val: u16) {
         let index = address as usize;
         util::write_u16_to_byteslice(&mut self.memory[index..index + 2], val);
     }
+
 
     fn write_word(&mut self, address: Address, val: u32) {
         let index = address as usize;

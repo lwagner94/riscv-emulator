@@ -4,6 +4,7 @@ use clap::{Arg, App, ArgMatches};
 
 use crate::addressspace::{AddressSpace, MemoryDevice};
 use crate::cpu::Cpu;
+use crate::loader::load_program;
 
 mod addressspace;
 mod cpu;
@@ -22,8 +23,9 @@ fn main() {
 
     let mut memory = AddressSpace::new();
     loader::load_program(&args.path, &mut memory).unwrap();
-    memory.init_instruction_buffer(0x1000);
     let mut cpu = Cpu::new();
+
+
 
     if args.debug_enabled {
         gdbserver::start_server(cpu, memory);
