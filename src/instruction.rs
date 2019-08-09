@@ -506,13 +506,10 @@ mod test {
     mod arithmetic_register {
         use super::super::*;
         macro_rules! arith_test {
-        ($instr:ident,  $code:expr) => {{
-            assert_eq!(
-                Instruction::new($code),
-                Instruction::$instr(1, 2, 3)
-            );
-        }};
-    }
+            ($instr:ident,  $code:expr) => {{
+                assert_eq!(Instruction::new($code), Instruction::$instr(1, 2, 3));
+            }};
+        }
         #[test]
         fn test_muls() {
             arith_test!(ADD, 0b0000000_00011_00010_000_00001_0110011);

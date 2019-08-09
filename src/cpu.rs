@@ -1,8 +1,8 @@
 use crate::addressspace::{AddressSpace, MemoryDevice};
 use crate::instruction::Instruction;
 use crate::util;
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 pub struct Cpu {
     registers: [u32; 32],
@@ -44,7 +44,7 @@ impl Cpu {
     }
 
     pub fn step(&mut self, memory: &mut AddressSpace) {
-//        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
+        //        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
         let instruction = Instruction::new(memory.read_word(self.pc));
 
         self.execute_instruction(&instruction, memory);
@@ -75,7 +75,6 @@ impl Cpu {
 
     #[inline(always)]
     pub fn execute_instruction(&mut self, instruction: &Instruction, memory: &mut AddressSpace) {
-
         match *instruction {
             Instruction::LUI(rd, imm) => {
                 self.set_register(rd, imm << 12);
@@ -161,8 +160,7 @@ impl Cpu {
             }
             Instruction::SH(rs1, rs2, imm) => {
                 let addr = self.calculate_address(rs1, imm);
-                memory
-                    .write_halfword(addr, self.get_register(rs2) as u16)
+                memory.write_halfword(addr, self.get_register(rs2) as u16)
             }
             Instruction::SW(rs1, rs2, imm) => {
                 let addr = self.calculate_address(rs1, imm);
@@ -300,48 +298,32 @@ impl Cpu {
             Instruction::DIV(rd, rs1, rs2) => {
                 let v1 = self.get_register(rs1) as i32 as i64;
                 let v2 = self.get_register(rs2) as i32 as i64;
-                let result = if v2 == 0 {
-                    -1
-                } else {
-                    v1 / v2
-                };
+                let result = if v2 == 0 { -1 } else { v1 / v2 };
                 self.set_register(rd, result as u32);
             }
             Instruction::DIVU(rd, rs1, rs2) => {
                 let v1 = self.get_register(rs1);
                 let v2 = self.get_register(rs2);
-                let result = if v2 == 0 {
-                    -1i32 as u32
-                } else {
-                    v1 / v2
-                };
+                let result = if v2 == 0 { -1i32 as u32 } else { v1 / v2 };
                 self.set_register(rd, result);
             }
             Instruction::REM(rd, rs1, rs2) => {
                 let v1 = self.get_register(rs1) as i32 as i64;
                 let v2 = self.get_register(rs2) as i32 as i64;
-                let result = if v2 == 0 {
-                    v1
-                } else {
-                    v1 % v2
-                };
+                let result = if v2 == 0 { v1 } else { v1 % v2 };
                 self.set_register(rd, result as u32);
             }
             Instruction::REMU(rd, rs1, rs2) => {
                 let v1 = self.get_register(rs1);
                 let v2 = self.get_register(rs2);
-                let result = if v2 == 0 {
-                    v1
-                } else {
-                    v1 % v2
-                };
+                let result = if v2 == 0 { v1 } else { v1 % v2 };
                 self.set_register(rd, result);
             }
             Instruction::EBREAK => {
                 self.running = false;
             }
             Instruction::INVALID => panic!("Invalid Instruction detected"),
-            _ => panic!("Instruction {:?} not implemented", instruction)
+            _ => panic!("Instruction {:?} not implemented", instruction),
         }
     }
 
@@ -364,7 +346,6 @@ impl Cpu {
     pub fn set_pc(&mut self, value: u32) {
         self.pc = value;
     }
-
 
     pub fn add_breakpoint(&mut self, address: u32) {
         self.breakpoints.insert(address);
@@ -527,13 +508,13 @@ mod test {
 
     #[test]
     fn test_div() {
-        register_test_new!(DIV,  3, 20, 6);
+        register_test_new!(DIV, 3, 20, 6);
         register_test_new!(DIV, -3i32, -20i32, 6);
         register_test_new!(DIV, -3i32, 20, -6i32);
-        register_test_new!(DIV,  3, -20i32, -6i32);
-        register_test_new!(DIV, -1i32<<31, -1i32<<31,  1);
-        register_test_new!(DIV, -1i32<<31, -1i32<<31, -1i32);
-        register_test_new!(DIV, -1i32, -1i32<<31, 0);
+        register_test_new!(DIV, 3, -20i32, -6i32);
+        register_test_new!(DIV, -1i32 << 31, -1i32 << 31, 1);
+        register_test_new!(DIV, -1i32 << 31, -1i32 << 31, -1i32);
+        register_test_new!(DIV, -1i32, -1i32 << 31, 0);
         register_test_new!(DIV, -1i32, 1, 0);
         register_test_new!(DIV, -1i32, 0, 0);
     }
@@ -544,9 +525,9 @@ mod test {
         register_test_new!(DIVU, 715827879, -20i32, 6);
         register_test_new!(DIVU, 0, 20, -6i32);
         register_test_new!(DIVU, 0, -20i32, -6i32);
-        register_test_new!(DIVU, -1i32<<31, -1i32<<31, 1);
-        register_test_new!(DIVU, 0, -1i32<<31, -1i32);
-        register_test_new!(DIVU, -1i32, -1<<31, 0);
+        register_test_new!(DIVU, -1i32 << 31, -1i32 << 31, 1);
+        register_test_new!(DIVU, 0, -1i32 << 31, -1i32);
+        register_test_new!(DIVU, -1i32, -1 << 31, 0);
         register_test_new!(DIVU, -1i32, 1, 0);
         register_test_new!(DIVU, -1i32, 0, 0);
     }
@@ -557,24 +538,24 @@ mod test {
         register_test_new!(REM, -2i32, -20i32, 6);
         register_test_new!(REM, 2, 20, -6i32);
         register_test_new!(REM, -2i32, -20i32, -6i32);
-        register_test_new!(REM, 0, -1i32<<31,  1);
-        register_test_new!(REM, 0, -1i32<<31, -1i32);
-        register_test_new!(REM, -1i32<<31, -1i32<<31, 0);
+        register_test_new!(REM, 0, -1i32 << 31, 1);
+        register_test_new!(REM, 0, -1i32 << 31, -1i32);
+        register_test_new!(REM, -1i32 << 31, -1i32 << 31, 0);
         register_test_new!(REM, 1, 1, 0);
         register_test_new!(REM, 0, 0, 0);
     }
 
     #[test]
     fn test_remu() {
-        register_test_new!(REMU,   2,  20,   6);
-        register_test_new!(REMU,   2, -20i32,   6);
-        register_test_new!(REMU,  20,  20,  -6i32);
-        register_test_new!(REMU, -20i32, -20i32,  -6i32);
-        register_test_new!(REMU,      0, -1i32<<31,  1);
-        register_test_new!(REMU, -1i32<<31, -1i32<<31, -1i32);
-        register_test_new!(REMU, -1i32<<31, -1i32<<31, 0);
-        register_test_new!(REMU,      1,      1, 0);
-        register_test_new!(REMU,      0,      0, 0);
+        register_test_new!(REMU, 2, 20, 6);
+        register_test_new!(REMU, 2, -20i32, 6);
+        register_test_new!(REMU, 20, 20, -6i32);
+        register_test_new!(REMU, -20i32, -20i32, -6i32);
+        register_test_new!(REMU, 0, -1i32 << 31, 1);
+        register_test_new!(REMU, -1i32 << 31, -1i32 << 31, -1i32);
+        register_test_new!(REMU, -1i32 << 31, -1i32 << 31, 0);
+        register_test_new!(REMU, 1, 1, 0);
+        register_test_new!(REMU, 0, 0, 0);
     }
 
     #[test]

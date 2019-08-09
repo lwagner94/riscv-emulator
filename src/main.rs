@@ -1,6 +1,6 @@
+use clap::{App, Arg, ArgMatches};
 use std::env;
 use std::time::SystemTime;
-use clap::{Arg, App, ArgMatches};
 
 use crate::addressspace::{AddressSpace, MemoryDevice};
 use crate::cpu::Cpu;
@@ -8,10 +8,10 @@ use crate::loader::load_program;
 
 mod addressspace;
 mod cpu;
+mod gdbserver;
 mod instruction;
 mod loader;
 mod util;
-mod gdbserver;
 
 const NAME: &'static str = env!("CARGO_PKG_NAME");
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -27,8 +27,7 @@ fn main() {
 
     if args.debug_enabled {
         gdbserver::start_server(cpu, memory);
-    }
-    else {
+    } else {
         let before = SystemTime::now();
         cpu.run(&mut memory);
         let after = SystemTime::now();
@@ -36,19 +35,19 @@ fn main() {
         let elapsed = after.duration_since(before).unwrap().as_micros();
         eprintln!(
             "\nExecuted {} instructions in {:?} µs",
-            cpu.get_cycle_counter(), elapsed
+            cpu.get_cycle_counter(),
+            elapsed
         );
         eprintln!(
             "Frequency: {} MHz",
             (cpu.get_cycle_counter() as f64 / elapsed as f64)
         );
-
     }
 }
 
 struct CommandLineArgs {
     path: String,
-    debug_enabled: bool
+    debug_enabled: bool,
 }
 
 fn parse_commandline() -> CommandLineArgs {
@@ -56,22 +55,24 @@ fn parse_commandline() -> CommandLineArgs {
         .version(VERSION)
         .author(AUTHORS)
         .about(DESCRIPTION)
-        .arg(Arg::with_name("BINARY")
-            .help("Set the binary file to run")
-            .required(true)
-            .index(1))
-        .arg(Arg::with_name("debug")
-            .short("d")
-            .help("Enables gdb-remote support"))
+        .arg(
+            Arg::with_name("BINARY")
+                .help("Set the binary file to run")
+                .required(true)
+                .index(1),
+        )
+        .arg(
+            Arg::with_name("debug")
+                .short("d")
+                .help("Enables gdb-remote support"),
+        )
         .get_matches();
-
 
     let path = matches.value_of("BINARY").unwrap();
     let debug_enabled = matches.is_present("debug");
 
     CommandLineArgs {
         path: path.to_string(),
-        debug_enabled
+        debug_enabled,
     }
 }
-

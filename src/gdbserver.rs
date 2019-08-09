@@ -1,24 +1,26 @@
+use gdb_remote_protocol::{
+    process_packets_from, Breakpoint, Error, Handler, MemoryRegion, ProcessType, StopReason,
+    ThreadId, Watchpoint,
+};
 use std::net::TcpListener;
-use gdb_remote_protocol::{Error,Handler,ProcessType,process_packets_from,StopReason, MemoryRegion, ThreadId, Breakpoint, Watchpoint};
 
 use std::cell::RefCell;
 
-use crate::Cpu;
-use crate::util;
 use crate::addressspace::MemoryDevice;
+use crate::util;
 use crate::AddressSpace;
-
+use crate::Cpu;
 
 const BIND_ADDRESS: &'static str = "0.0.0.0:3000";
 
 struct NoopHandler {
     cpu: RefCell<Cpu>,
-    memory: RefCell<AddressSpace>
+    memory: RefCell<AddressSpace>,
 }
 
 impl<'a> Handler for NoopHandler {
     fn query_supported_features(&self) -> Vec<String> {
-        let mut v = vec!();
+        let mut v = vec![];
         v
     }
 
@@ -38,7 +40,7 @@ impl<'a> Handler for NoopHandler {
     fn read_memory(&self, region: MemoryRegion) -> Result<Vec<u8>, Error> {
         let mut memory = self.memory.borrow_mut();
         let mut memory_content = Vec::with_capacity(region.length as usize);
-        for address in region.address .. region.address + region.length {
+        for address in region.address..region.address + region.length {
             memory_content.push(memory.read_byte(address as u32));
         }
 
@@ -82,8 +84,12 @@ impl<'a> Handler for NoopHandler {
         Err(Error::Unimplemented)
     }
 
-    fn search_memory(&self, _address: u64, _length: u64, _bytes: &[u8])
-                     -> Result<Option<u64>, Error> {
+    fn search_memory(
+        &self,
+        _address: u64,
+        _length: u64,
+        _bytes: &[u8],
+    ) -> Result<Option<u64>, Error> {
         Err(Error::Unimplemented)
     }
 
@@ -155,7 +161,6 @@ impl<'a> Handler for NoopHandler {
         Err(Error::Unimplemented)
     }
 
-
     fn remove_access_watchpoint(&self, _watchpoint: Watchpoint) -> Result<(), Error> {
         Err(Error::Unimplemented)
     }
@@ -175,9 +180,8 @@ impl<'a> Handler for NoopHandler {
     }
 }
 
-
 pub fn start_server(cpu: Cpu, memory: AddressSpace) {
-//    drop(env_logger::init());
+    //    drop(env_logger::init());
     let listener = TcpListener::bind(BIND_ADDRESS).unwrap();
     eprintln!("Listening on {}", BIND_ADDRESS);
     let res = listener.incoming().next().unwrap();
@@ -186,10 +190,9 @@ pub fn start_server(cpu: Cpu, memory: AddressSpace) {
     if let Ok(stream) = res {
         let h = NoopHandler {
             cpu: RefCell::new(cpu),
-            memory: RefCell::new(memory)
+            memory: RefCell::new(memory),
         };
         process_packets_from(stream.try_clone().unwrap(), stream, h);
     }
     eprintln!("Connection closed");
-
 }

@@ -1,6 +1,6 @@
+use crate::instruction::Instruction;
 use crate::util;
 use std::io::Write;
-use crate::instruction::Instruction;
 
 pub type Address = u32;
 
@@ -27,23 +27,19 @@ impl AddressSpace {
 }
 
 impl MemoryDevice for AddressSpace {
-
     fn read_byte(&self, address: Address) -> u8 {
         self.memory[address as usize]
     }
-
 
     fn read_halfword(&self, address: Address) -> u16 {
         let index = address as usize;
         util::read_u16_from_byteslice(&self.memory[index..index + 2])
     }
 
-
     fn read_word(&self, address: Address) -> u32 {
         let index = address as usize;
         util::read_u32_from_byteslice(&self.memory[index..index + 4])
     }
-
 
     fn write_byte(&mut self, address: Address, val: u8) {
         if address == 0xcafe_babe {
@@ -54,12 +50,10 @@ impl MemoryDevice for AddressSpace {
         self.memory[address as usize] = val;
     }
 
-
     fn write_halfword(&mut self, address: Address, val: u16) {
         let index = address as usize;
         util::write_u16_to_byteslice(&mut self.memory[index..index + 2], val);
     }
-
 
     fn write_word(&mut self, address: Address, val: u32) {
         let index = address as usize;
