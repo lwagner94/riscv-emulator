@@ -55,7 +55,7 @@ pub enum Instruction {
     DIVU(usize, usize, usize),
     REM(usize, usize, usize),
     REMU(usize, usize, usize),
-    LRW(usize, usize),
+    LRW(usize, usize, usize),
     SCW(usize, usize, usize),
     AMOSWAPW(usize, usize, usize),
     AMOADDW(usize, usize, usize),
@@ -276,7 +276,7 @@ impl Instruction {
         }
 
         match funct5 {
-            0b0_0010 if rs2 == 0 => LRW(rd, rs1),
+            0b0_0010 if rs2 == 0 => LRW(rd, rs1, 0),
             0b0_0011 => SCW(rd, rs1, rs2),
             0b0_0001 => AMOSWAPW(rd, rs1, rs2),
             0b0_0000 => AMOADDW(rd, rs1, rs2),
@@ -550,7 +550,7 @@ mod test {
             }};
         }
         #[test]
-        fn test_muls() {
+        fn test_arithmetic_register() {
             arith_test!(ADD, 0b0000000_00011_00010_000_00001_0110011);
             arith_test!(SUB, 0b0100000_00011_00010_000_00001_0110011);
             arith_test!(SLL, 0b0000000_00011_00010_001_00001_0110011);
@@ -569,6 +569,24 @@ mod test {
             arith_test!(DIVU, 0b0000001_00011_00010_101_00001_0110011);
             arith_test!(REM, 0b0000001_00011_00010_110_00001_0110011);
             arith_test!(REMU, 0b0000001_00011_00010_111_00001_0110011);
+        }
+
+        #[test]
+        fn test_atomics() {
+            assert_eq!(
+                Instruction::new(0b0001000_00000_00010_010_00001_0101111),
+                Instruction::LRW(1, 2, 0)
+            );
+            arith_test!(SCW, 0b0001100_00011_00010_010_00001_0101111);
+            arith_test!(AMOSWAPW, 0b0000100_00011_00010_010_00001_0101111);
+            arith_test!(AMOADDW, 0b0000000_00011_00010_010_00001_0101111);
+            arith_test!(AMOXORW, 0b0010000_00011_00010_010_00001_0101111);
+            arith_test!(AMOANDW, 0b0110000_00011_00010_010_00001_0101111);
+            arith_test!(AMOORW, 0b0100000_00011_00010_010_00001_0101111);
+            arith_test!(AMOMINW, 0b1000000_00011_00010_010_00001_0101111);
+            arith_test!(AMOMAXW, 0b1010000_00011_00010_010_00001_0101111);
+            arith_test!(AMOMINUW, 0b1100000_00011_00010_010_00001_0101111);
+            arith_test!(AMOMAXUW, 0b1110000_00011_00010_010_00001_0101111);
         }
     }
 
