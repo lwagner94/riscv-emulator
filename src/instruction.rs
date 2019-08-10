@@ -342,204 +342,92 @@ mod test {
     mod branch {
         use super::super::*;
 
-        #[test]
-        fn test_beq() {
-            assert_eq!(
-                Instruction::new(0b0111111_00010_00001_000_11101_1100011),
-                Instruction::BEQ(1, 2, 0xffc / 2)
-            );
+        macro_rules! branch_test {
+            ($instr:ident,  $code:expr, $expected:expr) => {{
+                assert_eq!(
+                    Instruction::new($code),
+                    Instruction::$instr(1, 2, $expected)
+                );
+            }};
         }
 
         #[test]
-        fn test_bne() {
-            assert_eq!(
-                Instruction::new(0b0111111_00010_00001_001_11101_1100011),
-                Instruction::BNE(1, 2, 0xffc / 2)
-            );
+        fn test_branch() {
+            branch_test!(BEQ, 0b0111111_00010_00001_000_11101_1100011, 0xffc / 2);
+            branch_test!(BNE, 0b0111111_00010_00001_001_11101_1100011, 0xffc / 2);
+            branch_test!(BLT, 0b0111111_00010_00001_100_11101_1100011, 0xffc / 2);
+            branch_test!(BGE, 0b0111111_00010_00001_101_11101_1100011, 0xffc / 2);
+            branch_test!(BLTU, 0b0111111_00010_00001_110_11101_1100011, 0xffc / 2);
+            branch_test!(BGEU, 0b0111111_00010_00001_111_11101_1100011, 0xffc / 2);
         }
-
-        #[test]
-        fn test_blt() {
-            assert_eq!(
-                Instruction::new(0b0111111_00010_00001_100_11101_1100011),
-                Instruction::BLT(1, 2, 0xffc / 2)
-            );
-        }
-
-        #[test]
-        fn test_bge() {
-            assert_eq!(
-                Instruction::new(0b0111111_00010_00001_101_11101_1100011),
-                Instruction::BGE(1, 2, 0xffc / 2)
-            );
-        }
-
-        #[test]
-        fn test_bltu() {
-            assert_eq!(
-                Instruction::new(0b0111111_00010_00001_110_11101_1100011),
-                Instruction::BLTU(1, 2, 0xffc / 2)
-            );
-        }
-
-        #[test]
-        fn test_bgeu() {
-            assert_eq!(
-                Instruction::new(0b0111111_00010_00001_111_11101_1100011),
-                Instruction::BGEU(1, 2, 0xffc / 2)
-            );
-        }
-
     }
 
     mod load {
         use super::super::*;
 
-        #[test]
-        fn test_lb() {
-            assert_eq!(
-                Instruction::new(0b100000000000_00010_000_00001_0000011),
-                Instruction::LB(1, 2, -2048)
-            );
+        macro_rules! load_test {
+            ($instr:ident,  $code:expr, $expected:expr) => {{
+                assert_eq!(
+                    Instruction::new($code),
+                    Instruction::$instr(1, 2, $expected)
+                );
+            }};
         }
 
         #[test]
-        fn test_lh() {
-            assert_eq!(
-                Instruction::new(0b100000000000_00010_001_00001_0000011),
-                Instruction::LH(1, 2, -2048)
-            );
-        }
-
-        #[test]
-        fn test_lw() {
-            assert_eq!(
-                Instruction::new(0b100000000000_00010_010_00001_0000011),
-                Instruction::LW(1, 2, -2048)
-            );
-        }
-
-        #[test]
-        fn test_lbu() {
-            assert_eq!(
-                Instruction::new(0b100000000000_00010_100_00001_0000011),
-                Instruction::LBU(1, 2, -2048)
-            );
-        }
-
-        #[test]
-        fn test_lhu() {
-            assert_eq!(
-                Instruction::new(0b100000000000_00010_101_00001_0000011),
-                Instruction::LHU(1, 2, -2048)
-            );
+        fn test_load() {
+            load_test!(LB, 0b100000000000_00010_000_00001_0000011, -2048i32);
+            load_test!(LH, 0b100000000000_00010_001_00001_0000011, -2048i32);
+            load_test!(LW, 0b100000000000_00010_010_00001_0000011, -2048i32);
+            load_test!(LBU, 0b100000000000_00010_100_00001_0000011, -2048i32);
+            load_test!(LHU, 0b100000000000_00010_101_00001_0000011, -2048i32);
         }
     }
 
     mod store {
         use super::super::*;
 
-        #[test]
-        fn test_sb() {
-            assert_eq!(
-                Instruction::new(0b1000000_00010_00001_000_00000_0100011),
-                Instruction::SB(1, 2, -2048)
-            );
+        macro_rules! store_test {
+            ($instr:ident,  $code:expr, $expected:expr) => {{
+                assert_eq!(
+                    Instruction::new($code),
+                    Instruction::$instr(1, 2, $expected)
+                );
+            }};
         }
 
         #[test]
-        fn test_sh() {
-            assert_eq!(
-                Instruction::new(0b1000000_00010_00001_001_00000_0100011),
-                Instruction::SH(1, 2, -2048)
-            );
+        fn test_store() {
+            store_test!(SB, 0b1000000_00010_00001_000_00000_0100011, -2048i32);
+            store_test!(SH, 0b1000000_00010_00001_001_00000_0100011, -2048i32);
+            store_test!(SW, 0b1000000_00010_00001_010_00000_0100011, -2048i32);
         }
-
-        #[test]
-        fn test_sw() {
-            assert_eq!(
-                Instruction::new(0b1000000_00010_00001_010_00000_0100011),
-                Instruction::SW(1, 2, -2048)
-            );
-        }
-
     }
 
     mod arithmetic_immediate {
         use super::super::*;
 
-        #[test]
-        fn test_addi() {
-            assert_eq!(
-                Instruction::new(0b1000000_00000_00010_000_00001_0010011),
-                Instruction::ADDI(1, 2, -2048i32 as u32)
-            );
+        macro_rules! immediate_test {
+            ($instr:ident,  $code:expr, $expected:expr) => {{
+                assert_eq!(
+                    Instruction::new($code),
+                    Instruction::$instr(1, 2, $expected as u32)
+                );
+            }};
         }
 
         #[test]
-        fn test_slti() {
-            assert_eq!(
-                Instruction::new(0b1000000_00000_00010_010_00001_0010011),
-                Instruction::SLTI(1, 2, -2048i32 as u32)
-            );
+        fn test_immediate() {
+            immediate_test!(ADDI, 0b1000000_00000_00010_000_00001_0010011, -2048i32);
+            immediate_test!(SLTI, 0b1000000_00000_00010_010_00001_0010011, -2048i32);
+            immediate_test!(SLTIU, 0b1000000_00000_00010_011_00001_0010011, -2048i32);
+            immediate_test!(XORI, 0b1000000_00000_00010_100_00001_0010011, -2048i32);
+            immediate_test!(ORI, 0b1000000_00000_00010_110_00001_0010011, -2048i32);
+            immediate_test!(ANDI, 0b1000000_00000_00010_111_00001_0010011, -2048i32);
+            immediate_test!(SLLI, 0b0000000_11111_00010_001_00001_0010011, 31);
+            immediate_test!(SRLI, 0b0000000_11111_00010_101_00001_0010011, 31);
+            immediate_test!(SRAI, 0b0100000_11111_00010_101_00001_0010011, 31);
         }
-
-        #[test]
-        fn test_sltiu() {
-            assert_eq!(
-                Instruction::new(0b1000000_00000_00010_011_00001_0010011),
-                Instruction::SLTIU(1, 2, -2048i32 as u32)
-            );
-        }
-
-        #[test]
-        fn test_andi() {
-            assert_eq!(
-                Instruction::new(0b1000000_00000_00010_100_00001_0010011),
-                Instruction::XORI(1, 2, -2048i32 as u32)
-            );
-        }
-
-        #[test]
-        fn test_ori() {
-            assert_eq!(
-                Instruction::new(0b1000000_00000_00010_110_00001_0010011),
-                Instruction::ORI(1, 2, -2048i32 as u32)
-            );
-        }
-
-        #[test]
-        fn test_xori() {
-            assert_eq!(
-                Instruction::new(0b1000000_00000_00010_111_00001_0010011),
-                Instruction::ANDI(1, 2, -2048i32 as u32)
-            );
-        }
-
-        #[test]
-        fn test_slli() {
-            assert_eq!(
-                Instruction::new(0b0000000_11111_00010_001_00001_0010011),
-                Instruction::SLLI(1, 2, 31)
-            );
-        }
-
-        #[test]
-        fn test_srli() {
-            assert_eq!(
-                Instruction::new(0b0000000_11111_00010_101_00001_0010011),
-                Instruction::SRLI(1, 2, 31)
-            );
-        }
-
-        #[test]
-        fn test_srai() {
-            assert_eq!(
-                Instruction::new(0b0100000_11111_00010_101_00001_0010011),
-                Instruction::SRAI(1, 2, 31)
-            );
-        }
-
     }
 
     mod arithmetic_register {
