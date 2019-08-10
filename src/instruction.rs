@@ -69,6 +69,27 @@ pub enum Instruction {
     INVALID,
 }
 
+#[derive(PartialEq, Debug, Clone)]
+pub struct WrappedInstruction {
+    pub instruction: Instruction,
+    pub size: u32,
+}
+
+impl WrappedInstruction {
+    pub fn new(code: u32) -> Self {
+        match code & 0b11 {
+            0b11 => WrappedInstruction {
+                instruction: Instruction::new(code),
+                size: 4,
+            },
+            _ => WrappedInstruction {
+                instruction: Instruction::new_compressed(code as u16),
+                size: 2,
+            },
+        }
+    }
+}
+
 use Instruction::*;
 
 impl Instruction {
@@ -135,6 +156,10 @@ impl Instruction {
             0b010_1111 => Instruction::match_atomic(code),
             _ => INVALID,
         }
+    }
+
+    pub fn new_compressed(code: u16) -> Self {
+        INVALID
     }
 
     fn match_branch(code: u32) -> Self {

@@ -1,5 +1,6 @@
 use crate::addressspace::{AddressSpace, MemoryDevice};
 use crate::instruction::Instruction;
+use crate::instruction::WrappedInstruction;
 use crate::util;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -28,27 +29,39 @@ impl Cpu {
     }
 
     pub fn run(&mut self, memory: &mut AddressSpace) {
-        let mut instruction_cache: Vec<Instruction> = vec![Instruction::INVALID; 0x1000];
+        let mut instruction_cache: Vec<WrappedInstruction> = vec![
+            WrappedInstruction {
+                instruction: Instruction::INVALID,
+                size: 0
+            };
+            0x1000
+        ];
 
         while self.running {
-            if instruction_cache[self.pc as usize] == Instruction::INVALID {
-                instruction_cache[self.pc as usize] = Instruction::new(memory.read_word(self.pc));
+            if instruction_cache[self.pc as usize].instruction == Instruction::INVALID {
+                instruction_cache[self.pc as usize] =
+                    WrappedInstruction::new(memory.read_word(self.pc));
             }
 
-            let instruction = &instruction_cache[self.pc as usize];
+            let wrapped_instruction = &instruction_cache[self.pc as usize];
 
-            self.execute_instruction(instruction, memory);
-            self.pc += 4;
+            let instruction = &wrapped_instruction.instruction;
+            let size = wrapped_instruction.size;
+
+            self.execute_instruction(instruction, size, memory);
+            self.pc += size;
             self.cycle_counter += 1;
         }
     }
 
     pub fn step(&mut self, memory: &mut AddressSpace) {
-        //        eprintln!("Executing PC: {:x} {:?}", self.pc, instruction);
-        let instruction = Instruction::new(memory.read_word(self.pc));
+        let wrapped_instruction = WrappedInstruction::new(memory.read_word(self.pc));
 
-        self.execute_instruction(&instruction, memory);
-        self.pc += 4;
+        let instruction = &wrapped_instruction.instruction;
+        let size = wrapped_instruction.size;
+
+        self.execute_instruction(instruction, size, memory);
+        self.pc += size;
         self.cycle_counter += 1;
     }
 
@@ -60,11 +73,11 @@ impl Cpu {
         }
     }
 
-    fn set_pc_for_branch(&mut self, condition: bool, imm: u32) {
+    fn set_pc_for_branch(&mut self, condition: bool, imm: u32, size: u32) {
         if condition {
             let mut new_pc = self.pc as i32;
             new_pc = new_pc.wrapping_add((imm as i32) * 2);
-            new_pc -= 4;
+            new_pc -= size as i32;
             self.pc = new_pc as u32;
         }
     }
@@ -74,7 +87,12 @@ impl Cpu {
     }
 
     #[inline(always)]
-    pub fn execute_instruction(&mut self, instruction: &Instruction, memory: &mut AddressSpace) {
+    pub fn execute_instruction(
+        &mut self,
+        instruction: &Instruction,
+        size: u32,
+        memory: &mut AddressSpace,
+    ) {
         match *instruction {
             Instruction::LUI(rd, imm) => {
                 self.set_register(rd, imm << 12);
@@ -84,50 +102,50 @@ impl Cpu {
                 self.set_register(rd, result)
             }
             Instruction::JAL(rd, imm) => {
-                let result = self.pc + 4;
+                let result = self.pc + size;
 
                 let mut new_pc = self.pc as i32;
                 new_pc = new_pc.wrapping_add((imm as i32) * 2);
 
-                self.pc = (new_pc - 4) as u32;
+                self.pc = (new_pc - size as i32) as u32;
                 self.set_register(rd, result);
             }
             Instruction::JALR(rd, rs1, imm) => {
                 let mut new_pc = self.get_register(rs1) as i32;
                 new_pc = new_pc.wrapping_add(imm as i32);
-                let result = self.pc + 4;
-                self.pc = ((new_pc as u32) & !1u32) - 4;
+                let result = self.pc + size;
+                self.pc = ((new_pc as u32) & !1u32) - size;
                 self.set_register(rd, result);
             }
             Instruction::BEQ(rs1, rs2, imm) => {
                 let v1 = self.get_register(rs1);
                 let v2 = self.get_register(rs2);
-                self.set_pc_for_branch(v1 == v2, imm);
+                self.set_pc_for_branch(v1 == v2, imm, size);
             }
             Instruction::BNE(rs1, rs2, imm) => {
                 let v1 = self.get_register(rs1);
                 let v2 = self.get_register(rs2);
-                self.set_pc_for_branch(v1 != v2, imm);
+                self.set_pc_for_branch(v1 != v2, imm, size);
             }
             Instruction::BLT(rs1, rs2, imm) => {
                 let v1 = self.get_register(rs1) as i32;
                 let v2 = self.get_register(rs2) as i32;
-                self.set_pc_for_branch(v1 < v2, imm);
+                self.set_pc_for_branch(v1 < v2, imm, size);
             }
             Instruction::BGE(rs1, rs2, imm) => {
                 let v1 = self.get_register(rs1) as i32;
                 let v2 = self.get_register(rs2) as i32;
-                self.set_pc_for_branch(v1 >= v2, imm);
+                self.set_pc_for_branch(v1 >= v2, imm, size);
             }
             Instruction::BLTU(rs1, rs2, imm) => {
                 let v1 = self.get_register(rs1);
                 let v2 = self.get_register(rs2);
-                self.set_pc_for_branch(v1 < v2, imm);
+                self.set_pc_for_branch(v1 < v2, imm, size);
             }
             Instruction::BGEU(rs1, rs2, imm) => {
                 let v1 = self.get_register(rs1);
                 let v2 = self.get_register(rs2);
-                self.set_pc_for_branch(v1 >= v2, imm);
+                self.set_pc_for_branch(v1 >= v2, imm, size);
             }
             Instruction::LB(rd, rs1, imm) => {
                 let addr = self.calculate_address(rs1, imm);
@@ -370,7 +388,7 @@ mod test {
             let mut cpu = Cpu::new();
             cpu.set_register(2, $first as u32);
 
-            cpu.execute_instruction(&Instruction::$instr(1, 2, $second as u32), &mut memory);
+            cpu.execute_instruction(&Instruction::$instr(1, 2, $second as u32), 4, &mut memory);
             assert_eq!(cpu.get_register(1), $result);
         }};
     }
@@ -382,7 +400,7 @@ mod test {
             cpu.set_register(2, $first as u32);
             cpu.set_register(3, $second as u32);
 
-            cpu.execute_instruction(&Instruction::$instr(1, 2, 3), &mut memory);
+            cpu.execute_instruction(&Instruction::$instr(1, 2, 3), 4, &mut memory);
             assert_eq!(cpu.get_register(1), $result as u32);
         }};
     }
@@ -394,7 +412,7 @@ mod test {
             cpu.set_register(2, $first as u32);
             cpu.set_register(3, $second as u32);
 
-            cpu.execute_instruction(&Instruction::$instr(1, 2, 3), &mut memory);
+            cpu.execute_instruction(&Instruction::$instr(1, 2, 3), 4, &mut memory);
             assert_eq!(cpu.get_register(1), $result as u32);
         }};
     }
@@ -565,7 +583,7 @@ mod test {
             let mut cpu = Cpu::new();
             cpu.pc = 80;
 
-            cpu.execute_instruction(&Instruction::JAL(1, offset as u32), &mut memory);
+            cpu.execute_instruction(&Instruction::JAL(1, offset as u32), 4, &mut memory);
             assert_eq!(cpu.get_register(1), 84);
             assert_eq!(cpu.pc, (80 + offset * 2 - 4) as u32);
         }
@@ -582,7 +600,7 @@ mod test {
             cpu.set_register(2, base);
             cpu.pc = 80;
 
-            cpu.execute_instruction(&Instruction::JALR(1, 2, offset as u32), &mut memory);
+            cpu.execute_instruction(&Instruction::JALR(1, 2, offset as u32), 4, &mut memory);
             assert_eq!(cpu.get_register(1), 84);
             assert_eq!(cpu.pc, ((base as i32 + offset - 4) as u32) & !1u32);
         }
@@ -604,7 +622,7 @@ mod test {
             cpu.set_register(3, second);
             cpu.pc = 80;
 
-            cpu.execute_instruction(&Instruction::$instr(2, 3, $offset), &mut memory);
+            cpu.execute_instruction(&Instruction::$instr(2, 3, $offset), 4, &mut memory);
 
             if $expect_jump {
                 assert_eq!((80i32).wrapping_add(2 * $offset) as u32 - 4, cpu.pc);
@@ -654,7 +672,7 @@ mod test {
 
         cpu.set_register(1, 0xF0);
         cpu.set_register(2, 0xCAFEBABE);
-        cpu.execute_instruction(&Instruction::SB(1, 2, 16), &mut memory);
+        cpu.execute_instruction(&Instruction::SB(1, 2, 16), 4, &mut memory);
         assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
         assert_eq!(0xBE, memory.read_byte(0xF0 + 16));
         assert_eq!(0, memory.read_byte(0xF0 + 16 + 1));
@@ -667,7 +685,7 @@ mod test {
 
         cpu.set_register(1, 0xF0);
         cpu.set_register(2, 0xCAFEBABE);
-        cpu.execute_instruction(&Instruction::SH(1, 2, 16), &mut memory);
+        cpu.execute_instruction(&Instruction::SH(1, 2, 16), 4, &mut memory);
         assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
         assert_eq!(0xBABE, memory.read_halfword(0xF0 + 16));
         assert_eq!(0, memory.read_byte(0xF0 + 16 + 3));
@@ -680,7 +698,7 @@ mod test {
 
         cpu.set_register(1, 0xF0);
         cpu.set_register(2, 0xCAFEBABE);
-        cpu.execute_instruction(&Instruction::SW(1, 2, 16), &mut memory);
+        cpu.execute_instruction(&Instruction::SW(1, 2, 16), 4, &mut memory);
         assert_eq!(0, memory.read_byte(0xF0 + 16 - 1));
         assert_eq!(0xCAFEBABE, memory.read_word(0xF0 + 16));
         assert_eq!(0, memory.read_byte(0xF0 + 16 + 5));
@@ -693,7 +711,7 @@ mod test {
             let mut cpu = Cpu::new();
 
             cpu.set_register(2, 0xF0);
-            cpu.execute_instruction(&Instruction::$instr(1, 2, 16), &mut memory);
+            cpu.execute_instruction(&Instruction::$instr(1, 2, 16), 4, &mut memory);
             assert_eq!(cpu.get_register(1), $expected);
         }};
     }
