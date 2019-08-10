@@ -55,6 +55,17 @@ pub enum Instruction {
     DIVU(usize, usize, usize),
     REM(usize, usize, usize),
     REMU(usize, usize, usize),
+    LRW(usize, usize),
+    SCW(usize, usize, usize),
+    AMOSWAPW(usize, usize, usize),
+    AMOADDW(usize, usize, usize),
+    AMOXORW(usize, usize, usize),
+    AMOANDW(usize, usize, usize),
+    AMOORW(usize, usize, usize),
+    AMOMINW(usize, usize, usize),
+    AMOMAXW(usize, usize, usize),
+    AMOMINUW(usize, usize, usize),
+    AMOMAXUW(usize, usize, usize),
     INVALID,
 }
 
@@ -121,6 +132,7 @@ impl Instruction {
                     INVALID
                 }
             }
+            0b010_1111 => Instruction::match_atomic(code),
             _ => INVALID,
         }
     }
@@ -248,6 +260,33 @@ impl Instruction {
             (0b110, 0b000_0001) => REM(rd, rs1, rs2),
             (0b111, 0b000_0000) => AND(rd, rs1, rs2),
             (0b111, 0b000_0001) => REMU(rd, rs1, rs2),
+            _ => INVALID,
+        }
+    }
+
+    fn match_atomic(code: u32) -> Self {
+        let rd = shift_and_mask(code, 7, REGISTER_MASK);
+        let funct3 = shift_and_mask(code, 12, FUNCT3_MASK);
+        let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
+        let rs2 = shift_and_mask(code, 20, REGISTER_MASK);
+        let funct5 = shift_and_mask(code, 27, 0b1_1111);
+
+        if funct3 != 0b010 {
+            return INVALID;
+        }
+
+        match funct5 {
+            0b0_0010 if rs2 == 0 => LRW(rd, rs1),
+            0b0_0011 => SCW(rd, rs1, rs2),
+            0b0_0001 => AMOSWAPW(rd, rs1, rs2),
+            0b0_0000 => AMOADDW(rd, rs1, rs2),
+            0b0_0100 => AMOXORW(rd, rs1, rs2),
+            0b0_1100 => AMOANDW(rd, rs1, rs2),
+            0b0_1000 => AMOORW(rd, rs1, rs2),
+            0b1_0000 => AMOMINW(rd, rs1, rs2),
+            0b1_0100 => AMOMAXW(rd, rs1, rs2),
+            0b1_1000 => AMOMINUW(rd, rs1, rs2),
+            0b1_1100 => AMOMAXUW(rd, rs1, rs2),
             _ => INVALID,
         }
     }
