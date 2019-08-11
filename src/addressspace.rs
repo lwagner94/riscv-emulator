@@ -1,5 +1,8 @@
 use crate::instruction::Instruction;
+use crate::ram;
+use crate::ram::Ram;
 use crate::util;
+use std::borrow::BorrowMut;
 use std::io::Write;
 
 pub type Address = u32;
@@ -15,81 +18,65 @@ pub trait MemoryDevice {
 }
 
 pub struct AddressSpace {
-    memory: Vec<u8>,
+    memory_devices: [Box<dyn MemoryDevice>; 1],
+    address_lut: [u32; 4096],
 }
 
 impl AddressSpace {
     pub fn new() -> Self {
         AddressSpace {
-            memory: vec![0; 1024 * 1024], // 1MB for now
+            memory_devices: [Box::new(Ram::new())],
+            address_lut: [0u32; 4096],
         }
+    }
+
+    fn get_device_for_address_mut(&mut self, address: Address) -> &mut Box<dyn MemoryDevice> {
+        let device_index = self.calculate_device_index(address);
+        &mut self.memory_devices[device_index]
+    }
+
+    fn get_device_for_address(&self, address: Address) -> &Box<dyn MemoryDevice> {
+        let device_index = self.calculate_device_index(address);
+        &self.memory_devices[device_index]
+    }
+
+    fn calculate_device_index(&self, address: Address) -> usize {
+        let index = (address >> 20) as usize;
+        self.address_lut[index] as usize
     }
 }
 
 impl MemoryDevice for AddressSpace {
     fn read_byte(&self, address: Address) -> u8 {
-        self.memory[address as usize]
+        let device = self.get_device_for_address(address);
+        device.read_byte(address)
     }
 
     fn read_halfword(&self, address: Address) -> u16 {
-        let index = address as usize;
-        util::read_u16_from_byteslice(&self.memory[index..index + 2])
+        let device = self.get_device_for_address(address);
+        device.read_halfword(address)
     }
 
     fn read_word(&self, address: Address) -> u32 {
-        let index = address as usize;
-        util::read_u32_from_byteslice(&self.memory[index..index + 4])
+        let device = self.get_device_for_address(address);
+        device.read_word(address)
     }
 
     fn write_byte(&mut self, address: Address, val: u8) {
-        if address == 0xcafe_babe {
-            print!("{}", val as char);
-            std::io::stdout().flush();
-            return;
-        }
-        self.memory[address as usize] = val;
+        let device = self.get_device_for_address_mut(address);
+        device.write_byte(address, val)
     }
 
     fn write_halfword(&mut self, address: Address, val: u16) {
-        let index = address as usize;
-        util::write_u16_to_byteslice(&mut self.memory[index..index + 2], val);
+        let device = self.get_device_for_address_mut(address);
+        device.write_halfword(address, val)
     }
 
     fn write_word(&mut self, address: Address, val: u32) {
-        let index = address as usize;
-        util::write_u32_to_byteslice(&mut self.memory[index..index + 4], val);
+        let device = self.get_device_for_address_mut(address);
+        device.write_word(address, val)
     }
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_byte_access() {
-        let mut mem = AddressSpace::new();
-
-        mem.write_byte(0, 0xCA);
-        assert_eq!(0xCA, mem.read_byte(0))
-    }
-
-    #[test]
-    fn test_halfword_access() {
-        for i in 0..4 {
-            let mut mem = AddressSpace::new();
-
-            mem.write_halfword(0 + i, 0xCAFE);
-            assert_eq!(0xCAFE, mem.read_halfword(0 + i))
-        }
-    }
-
-    #[test]
-    fn test_word_access() {
-        for i in 0..4 {
-            let mut mem = AddressSpace::new();
-
-            mem.write_word(0 + i, 0xCAFEBABE);
-            assert_eq!(0xCAFEBABE, mem.read_word(0 + i))
-        }
-    }
-}
+mod test {}

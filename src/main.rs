@@ -11,6 +11,7 @@ mod cpu;
 mod gdbserver;
 mod instruction;
 mod loader;
+mod ram;
 mod util;
 
 const NAME: &'static str = env!("CARGO_PKG_NAME");
