@@ -6,7 +6,7 @@ use std::net::TcpListener;
 
 use std::cell::RefCell;
 
-use crate::addressspace::MemoryDevice;
+use crate::memory::addressspace::MemoryDevice;
 use crate::util;
 use crate::AddressSpace;
 use crate::Cpu;

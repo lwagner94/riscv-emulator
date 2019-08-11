@@ -1,6 +1,6 @@
-use crate::addressspace::{AddressSpace, MemoryDevice};
 use crate::instruction::Instruction;
 use crate::instruction::WrappedInstruction;
+use crate::memory::addressspace::{AddressSpace, MemoryDevice};
 use crate::util;
 use std::collections::HashMap;
 use std::collections::HashSet;

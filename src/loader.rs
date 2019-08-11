@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
-use crate::addressspace::{Address, AddressSpace, MemoryDevice};
+use crate::memory::addressspace::{Address, AddressSpace, MemoryDevice};
 
 pub fn load_program(path: &str, memory: &mut AddressSpace) -> io::Result<()> {
     let mut f = File::open(path)?;

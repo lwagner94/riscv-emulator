@@ -2,16 +2,15 @@ use clap::{App, Arg, ArgMatches};
 use std::env;
 use std::time::SystemTime;
 
-use crate::addressspace::{AddressSpace, MemoryDevice};
 use crate::cpu::Cpu;
 use crate::loader::load_program;
+use crate::memory::addressspace::{AddressSpace, MemoryDevice};
 
-mod addressspace;
 mod cpu;
 mod gdbserver;
 mod instruction;
 mod loader;
-mod ram;
+mod memory;
 mod util;
 
 const NAME: &'static str = env!("CARGO_PKG_NAME");

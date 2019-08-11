@@ -1,6 +1,6 @@
+use super::ram;
+use super::ram::Ram;
 use crate::instruction::Instruction;
-use crate::ram;
-use crate::ram::Ram;
 use crate::util;
 use std::borrow::BorrowMut;
 use std::io::Write;

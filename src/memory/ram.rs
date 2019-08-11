@@ -1,5 +1,5 @@
-use crate::addressspace::Address;
-use crate::addressspace::MemoryDevice;
+use super::addressspace::Address;
+use super::addressspace::MemoryDevice;
 use crate::util;
 use std::io::Write;
 
