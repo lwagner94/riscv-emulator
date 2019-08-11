@@ -1,6 +1,7 @@
 use super::ram;
 use super::ram::Ram;
 use crate::instruction::Instruction;
+use crate::memory::debug::Debug;
 use crate::util;
 use std::borrow::BorrowMut;
 use std::io::Write;
@@ -15,18 +16,29 @@ pub trait MemoryDevice {
     fn write_byte(&mut self, address: Address, val: u8);
     fn write_halfword(&mut self, address: Address, val: u16);
     fn write_word(&mut self, address: Address, val: u32);
+
+    fn get_relative_address(&self, address: Address) -> Address {
+        (address - self.offset())
+    }
+
+    fn offset(&self) -> Address;
 }
 
 pub struct AddressSpace {
-    memory_devices: [Box<dyn MemoryDevice>; 1],
+    memory_devices: [Box<dyn MemoryDevice>; 2],
     address_lut: [u32; 4096],
 }
 
 impl AddressSpace {
-    pub fn new() -> Self {
+    pub fn new() -> AddressSpace {
+        let debug_address = (1 << 20) * 512;
+
+        let mut lut = [0u32; 4096];
+        lut[512] = 1;
+
         AddressSpace {
-            memory_devices: [Box::new(Ram::new())],
-            address_lut: [0u32; 4096],
+            memory_devices: [Ram::new(0), Debug::new(debug_address)],
+            address_lut: lut,
         }
     }
 
@@ -75,6 +87,10 @@ impl MemoryDevice for AddressSpace {
     fn write_word(&mut self, address: Address, val: u32) {
         let device = self.get_device_for_address_mut(address);
         device.write_word(address, val)
+    }
+
+    fn offset(&self) -> Address {
+        0
     }
 }
 
