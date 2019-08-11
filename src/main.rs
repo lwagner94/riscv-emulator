@@ -2,7 +2,7 @@ use clap::{App, Arg, ArgMatches};
 use std::time::SystemTime;
 
 use crate::cpu::Cpu;
-use crate::memory::addressspace::{AddressSpace};
+use crate::memory::addressspace::AddressSpace;
 
 mod cpu;
 mod gdbserver;

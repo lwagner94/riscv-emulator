@@ -1,6 +1,7 @@
 use super::ram::Ram;
+use super::video::Video;
 use crate::memory::debug::Debug;
-use std::borrow::{Borrow};
+use std::borrow::Borrow;
 
 pub type Address = u32;
 
@@ -21,27 +22,33 @@ pub trait MemoryDevice {
 }
 
 pub struct AddressSpace {
-    memory_devices: [Box<dyn MemoryDevice>; 2],
+    memory_devices: [Box<dyn MemoryDevice>; 3],
     address_lut: [u32; 4096],
 }
 
 impl AddressSpace {
     pub fn new() -> AddressSpace {
         let debug_address = (1 << 20) * 512;
+        let video_address = (1 << 20) * 1024;
 
         let mut lut = [0u32; 4096];
         lut[512] = 1;
+        lut[1024] = 2;
+        lut[1025] = 2;
 
         AddressSpace {
-            memory_devices: [Box::new(Ram::new(0)), Box::new(Debug::new(debug_address))],
+            memory_devices: [
+                Box::new(Ram::new(0)),
+                Box::new(Debug::new(debug_address)),
+                Box::new(Video::new(video_address)),
+            ],
             address_lut: lut,
         }
     }
 
-    fn get_device_for_address_mut(&mut self, address: Address) -> & mut dyn MemoryDevice {
+    fn get_device_for_address_mut(&mut self, address: Address) -> &mut dyn MemoryDevice {
         let device_index = self.calculate_device_index(address);
         &mut *self.memory_devices[device_index]
-
     }
 
     fn get_device_for_address(&self, address: Address) -> &dyn MemoryDevice {
