@@ -1,7 +1,6 @@
 use super::addressspace::Address;
 use super::addressspace::MemoryDevice;
 use crate::util;
-use std::io::Write;
 
 pub struct Ram {
     memory: Vec<u8>,
@@ -9,11 +8,11 @@ pub struct Ram {
 }
 
 impl Ram {
-    pub fn new(offset: Address) -> Box<MemoryDevice> {
-        Box::new(Ram {
+    pub fn new(offset: Address) -> Ram {
+        Ram {
             memory: vec![0; 1024 * 1024], // 1MB for now,
             offset,
-        })
+        }
     }
 }
 
@@ -33,11 +32,6 @@ impl MemoryDevice for Ram {
     }
 
     fn write_byte(&mut self, address: Address, val: u8) {
-        if address == 0xcafe_babe {
-            print!("{}", val as char);
-            std::io::stdout().flush();
-            return;
-        }
         self.memory[address as usize] = val;
     }
 

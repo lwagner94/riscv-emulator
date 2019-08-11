@@ -11,7 +11,7 @@ use crate::util;
 use crate::AddressSpace;
 use crate::Cpu;
 
-const BIND_ADDRESS: &'static str = "0.0.0.0:3000";
+const BIND_ADDRESS: &str = "0.0.0.0:3000";
 
 struct NoopHandler {
     cpu: RefCell<Cpu>,
@@ -20,7 +20,7 @@ struct NoopHandler {
 
 impl<'a> Handler for NoopHandler {
     fn query_supported_features(&self) -> Vec<String> {
-        let mut v = vec![];
+        let v = vec![];
         v
     }
 
@@ -38,7 +38,7 @@ impl<'a> Handler for NoopHandler {
     }
 
     fn read_memory(&self, region: MemoryRegion) -> Result<Vec<u8>, Error> {
-        let mut memory = self.memory.borrow_mut();
+        let memory = self.memory.borrow_mut();
         let mut memory_content = Vec::with_capacity(region.length as usize);
         for address in region.address..region.address + region.length {
             memory_content.push(memory.read_byte(address as u32));
@@ -97,7 +97,7 @@ impl<'a> Handler for NoopHandler {
         Ok(StopReason::Signal(5))
     }
 
-    fn invoke(&self, data: &[u8]) -> Result<String, Error> {
+    fn invoke(&self, _data: &[u8]) -> Result<String, Error> {
         Err(Error::Unimplemented)
     }
 

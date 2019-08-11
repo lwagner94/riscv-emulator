@@ -2,7 +2,6 @@ use crate::instruction::Instruction;
 use crate::instruction::WrappedInstruction;
 use crate::memory::addressspace::{AddressSpace, MemoryDevice};
 use crate::util;
-use std::collections::HashMap;
 use std::collections::HashSet;
 
 pub struct Cpu {
@@ -24,6 +23,7 @@ impl Cpu {
         }
     }
 
+    #[allow(dead_code)]
     pub fn reset(&mut self) {
         *self = Cpu::new();
     }
@@ -290,32 +290,32 @@ impl Cpu {
                 self.set_register(rd, result);
             }
             Instruction::MUL(rd, rs1, rs2) => {
-                let v1 = self.get_register(rs1) as u64;
-                let v2 = self.get_register(rs2) as u64;
+                let v1 = u64::from(self.get_register(rs1));
+                let v2 = u64::from(self.get_register(rs2));
                 let result = v1 * v2;
                 self.set_register(rd, result as u32);
             }
             Instruction::MULH(rd, rs1, rs2) => {
-                let v1 = self.get_register(rs1) as i32 as i64;
-                let v2 = self.get_register(rs2) as i32 as i64;
+                let v1 = i64::from(self.get_register(rs1) as i32);
+                let v2 = i64::from(self.get_register(rs2) as i32);
                 let result = v1 * v2;
                 self.set_register(rd, (result >> 32) as u32);
             }
             Instruction::MULHSU(rd, rs1, rs2) => {
-                let v1 = self.get_register(rs1) as i32 as i64;
-                let v2 = self.get_register(rs2) as i64;
+                let v1 = i64::from(self.get_register(rs1) as i32);
+                let v2 = i64::from(self.get_register(rs2));
                 let result = v1 * v2;
                 self.set_register(rd, (result >> 32) as u32);
             }
             Instruction::MULHU(rd, rs1, rs2) => {
-                let v1 = self.get_register(rs1) as u64;
-                let v2 = self.get_register(rs2) as u64;
+                let v1 = u64::from(self.get_register(rs1));
+                let v2 = u64::from(self.get_register(rs2));
                 let result = v1 * v2;
                 self.set_register(rd, (result >> 32) as u32);
             }
             Instruction::DIV(rd, rs1, rs2) => {
-                let v1 = self.get_register(rs1) as i32 as i64;
-                let v2 = self.get_register(rs2) as i32 as i64;
+                let v1 = i64::from(self.get_register(rs1) as i32);
+                let v2 = i64::from(self.get_register(rs2) as i32);
                 let result = if v2 == 0 { -1 } else { v1 / v2 };
                 self.set_register(rd, result as u32);
             }
@@ -326,8 +326,8 @@ impl Cpu {
                 self.set_register(rd, result);
             }
             Instruction::REM(rd, rs1, rs2) => {
-                let v1 = self.get_register(rs1) as i32 as i64;
-                let v2 = self.get_register(rs2) as i32 as i64;
+                let v1 = i64::from(self.get_register(rs1) as i32);
+                let v2 = i64::from(self.get_register(rs2) as i32);
                 let result = if v2 == 0 { v1 } else { v1 % v2 };
                 self.set_register(rd, result as u32);
             }
@@ -361,6 +361,7 @@ impl Cpu {
         self.pc
     }
 
+    #[allow(dead_code)]
     pub fn set_pc(&mut self, value: u32) {
         self.pc = value;
     }

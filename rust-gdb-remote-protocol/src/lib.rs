@@ -13,7 +13,8 @@
 //! * [Documentation of the protocol](https://sourceware.org/gdb/onlinedocs/gdb/Remote-Protocol.html)
 //! * [LLDB extensions](https://github.com/llvm-mirror/lldb/blob/master/docs/lldb-gdb-remote.txt)
 
-#![deny(missing_docs)]
+
+#![allow(clippy::all)]
 
 #[macro_use]
 extern crate log;
@@ -435,13 +436,13 @@ named!(write_register<&[u8], (u64, Vec<u8>)>,
 named!(write_general_registers<&[u8], Vec<u8>>,
        preceded!(tag!("G"), hex_byte_sequence));
 
-/// Helper for parse_thread_id that parses a single thread-id element.
+// Helper for parse_thread_id that parses a single thread-id element.
 named!(parse_thread_id_element<&[u8], Id>,
        alt_complete!(tag!("0") => { |_| Id::Any }
                      | tag!("-1") => { |_| Id::All }
                      | hex_value => { |val: u64| Id::Id(val as u32) }));
 
-/// Parse a thread-id.
+// Parse a thread-id.
 named!(parse_thread_id<&[u8], ThreadId>,
        alt_complete!(parse_thread_id_element => { |pid| ThreadId { pid: pid, tid: Id::Any } }
                      | preceded!(tag!("p"),
@@ -454,11 +455,11 @@ named!(parse_thread_id<&[u8], ThreadId>,
                          |id: Id| ThreadId { pid: id, tid: Id::All }
                      }));
 
-/// Parse the T packet.
+// Parse the T packet.
 named!(parse_ping_thread<&[u8], ThreadId>,
        preceded!(tag!("T"), parse_thread_id));
 
-fn v_command<'a>(i: &'a [u8]) -> IResult<&'a [u8], Command<'a>> {
+fn v_command(i: & [u8]) -> IResult<& [u8], Command> {
     alt_complete!(i,
                   tag!("vCtrlC") => { |_| Command::CtrlC }
                   | preceded!(tag!("vKill;"), hex_value) => {
@@ -470,11 +471,11 @@ fn v_command<'a>(i: &'a [u8]) -> IResult<&'a [u8], Command<'a>> {
                   })
 }
 
-/// Parse the H packet.
+// Parse the H packet.
 named!(parse_h_packet<&[u8], ThreadId>,
        preceded!(tag!("Hg"), parse_thread_id));
 
-/// Parse the D packet.
+// Parse the D packet.
 named!(parse_d_packet<&[u8], Option<u64>>,
        alt_complete!(preceded!(tag!("D;"), hex_value) => {
            |pid| Some(pid)

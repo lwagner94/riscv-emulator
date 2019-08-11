@@ -1,10 +1,8 @@
 use clap::{App, Arg, ArgMatches};
-use std::env;
 use std::time::SystemTime;
 
 use crate::cpu::Cpu;
-use crate::loader::load_program;
-use crate::memory::addressspace::{AddressSpace, MemoryDevice};
+use crate::memory::addressspace::{AddressSpace};
 
 mod cpu;
 mod gdbserver;
@@ -13,10 +11,10 @@ mod loader;
 mod memory;
 mod util;
 
-const NAME: &'static str = env!("CARGO_PKG_NAME");
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-const AUTHORS: &'static str = env!("CARGO_PKG_AUTHORS");
-const DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
+const NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
+const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
 fn main() {
     let args = parse_commandline();

@@ -1,6 +1,5 @@
 use super::addressspace::Address;
 use super::addressspace::MemoryDevice;
-use crate::util;
 use std::io::Write;
 
 pub struct Debug {
@@ -8,25 +7,25 @@ pub struct Debug {
 }
 
 impl Debug {
-    pub fn new(offset: Address) -> Box<Debug> {
-        if offset % 1 << 20 != 0 {
+    pub fn new(offset: Address) -> Debug {
+        if offset % (1 << 20) != 0 {
             panic!("Offset not aligned properly");
         }
 
-        Box::new(Self { offset })
+        Self { offset }
     }
 }
 
 impl MemoryDevice for Debug {
-    fn read_byte(&self, address: Address) -> u8 {
+    fn read_byte(&self, _address: Address) -> u8 {
         unimplemented!();
     }
 
-    fn read_halfword(&self, address: Address) -> u16 {
+    fn read_halfword(&self, _address: Address) -> u16 {
         unimplemented!();
     }
 
-    fn read_word(&self, address: Address) -> u32 {
+    fn read_word(&self, _address: Address) -> u32 {
         unimplemented!();
     }
 
@@ -35,7 +34,7 @@ impl MemoryDevice for Debug {
         match self.get_relative_address(address) {
             0 => {
                 print!("{}", val as char);
-                std::io::stdout().flush();
+                std::io::stdout().flush().unwrap();
             }
             _ => panic!(
                 "Invalid debug device access at {:x}, relative address {:x}",
@@ -44,11 +43,11 @@ impl MemoryDevice for Debug {
         }
     }
 
-    fn write_halfword(&mut self, address: Address, val: u16) {
+    fn write_halfword(&mut self, _address: Address, _val: u16) {
         unimplemented!();
     }
 
-    fn write_word(&mut self, address: Address, val: u32) {
+    fn write_word(&mut self, _address: Address, _val: u32) {
         unimplemented!();
     }
 

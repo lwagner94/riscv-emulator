@@ -1,10 +1,6 @@
-use super::ram;
 use super::ram::Ram;
-use crate::instruction::Instruction;
 use crate::memory::debug::Debug;
-use crate::util;
-use std::borrow::BorrowMut;
-use std::io::Write;
+use std::borrow::{Borrow};
 
 pub type Address = u32;
 
@@ -37,19 +33,20 @@ impl AddressSpace {
         lut[512] = 1;
 
         AddressSpace {
-            memory_devices: [Ram::new(0), Debug::new(debug_address)],
+            memory_devices: [Box::new(Ram::new(0)), Box::new(Debug::new(debug_address))],
             address_lut: lut,
         }
     }
 
-    fn get_device_for_address_mut(&mut self, address: Address) -> &mut Box<dyn MemoryDevice> {
+    fn get_device_for_address_mut(&mut self, address: Address) -> & mut dyn MemoryDevice {
         let device_index = self.calculate_device_index(address);
-        &mut self.memory_devices[device_index]
+        &mut *self.memory_devices[device_index]
+
     }
 
-    fn get_device_for_address(&self, address: Address) -> &Box<dyn MemoryDevice> {
+    fn get_device_for_address(&self, address: Address) -> &dyn MemoryDevice {
         let device_index = self.calculate_device_index(address);
-        &self.memory_devices[device_index]
+        &*self.memory_devices[device_index].borrow()
     }
 
     fn calculate_device_index(&self, address: Address) -> usize {

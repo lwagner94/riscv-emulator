@@ -158,7 +158,7 @@ impl Instruction {
         }
     }
 
-    pub fn new_compressed(code: u16) -> Self {
+    pub fn new_compressed(_code: u16) -> Self {
         INVALID
     }
 
