@@ -10,7 +10,7 @@ pub struct Ram {
 impl Ram {
     pub fn new(offset: Address) -> Ram {
         Ram {
-            memory: vec![0; 1024 * 1024], // 1MB for now,
+            memory: vec![0; 1024 * 1024 * 128], // 128MB for now,
             offset,
         }
     }

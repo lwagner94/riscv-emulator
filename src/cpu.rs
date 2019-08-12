@@ -4,6 +4,7 @@ use crate::memory::addressspace::{AddressSpace, MemoryDevice};
 use crate::util;
 use std::collections::HashSet;
 
+
 pub struct Cpu {
     registers: [u32; 32],
     pc: u32,
@@ -34,7 +35,7 @@ impl Cpu {
                 instruction: Instruction::INVALID,
                 size: 0
             };
-            0x1000
+            0x100000 // 1 Megabyte
         ];
 
         while self.running {

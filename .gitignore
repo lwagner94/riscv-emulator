@@ -1,6 +1,10 @@
 test.o
 test.S
-programs/
+*.bin
+*.elf
+*.list
+*.o
+*.a
 .idea/
 /target
 **/*.rs.bk
