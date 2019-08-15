@@ -1,4 +1,6 @@
 use std::mem::size_of_val;
+use std::mem::transmute_copy;
+use std::intrinsics::{copy_nonoverlapping, transmute};
 
 pub fn read_u16_from_byteslice(slice: &[u8]) -> u16 {
     u16::from(slice[0]) | u16::from(slice[1]) << 8
@@ -21,6 +23,7 @@ pub fn write_u32_to_byteslice(slice: &mut [u8], value: u32) {
     slice[1] = (value >> 8) as u8;
     slice[2] = (value >> 16) as u8;
     slice[3] = (value >> 24) as u8;
+
 }
 
 pub fn sign_extend(x: i32, nbits: u32) -> i32 {

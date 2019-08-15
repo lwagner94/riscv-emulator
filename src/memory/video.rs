@@ -1,5 +1,6 @@
 use super::addressspace::Address;
 use super::addressspace::MemoryDevice;
+use crate::util;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::{Color, PixelFormatEnum};
@@ -12,7 +13,7 @@ use std::time::Duration;
 
 const SIZE_X: u32 = 800;
 const SIZE_Y: u32 = 600;
-const VEC_SIZE: usize = (SIZE_X * SIZE_Y * 3) as usize;
+const VEC_SIZE: usize = (SIZE_X * SIZE_Y * 4) as usize;
 
 static mut FRAMEBUFFER: [u8; VEC_SIZE] = [0; VEC_SIZE];
 
@@ -42,7 +43,12 @@ impl MemoryDevice for Video {
         unimplemented!();
     }
     fn write_word(&mut self, _address: Address, _val: u32) {
-        unimplemented!();
+        let relative_address = self.get_relative_address(_address) as usize;
+        //        self.framebuffer[relative_address] = _val;
+        unsafe {
+//            FRAMEBUFFER[relative_address] = _val;
+            util::write_u32_to_byteslice(&mut FRAMEBUFFER[relative_address..relative_address+4], _val);
+        }
     }
 
     fn offset(&self) -> Address {
@@ -52,6 +58,7 @@ impl MemoryDevice for Video {
 
 impl Video {
     pub fn new(offset: Address) -> Video {
+        #[cfg(not(test))]
         thread::spawn(move || {
             let sdl_context = sdl2::init().unwrap();
             let video_subsystem = sdl_context.video().unwrap();
@@ -71,7 +78,7 @@ impl Video {
             let texture_creator = canvas.texture_creator();
 
             let mut texture: Texture = texture_creator
-                .create_texture_streaming(Some(PixelFormatEnum::RGB24), SIZE_X, SIZE_Y)
+                .create_texture_streaming(Some(PixelFormatEnum::RGBA8888), SIZE_X, SIZE_Y)
                 .unwrap();
 
             let mut event_pump = sdl_context.event_pump().unwrap();

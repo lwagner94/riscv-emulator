@@ -22,8 +22,11 @@ novectors.o : ../common/novectors.s
 main.o : main.c
 	$(RISCVGNU)-gcc $(COPS) -I$(INC) -c main.c -o main.o
 
-main.bin : ../common/memmap novectors.o main.o
-	$(RISCVGNU)-ld  -m elf32lriscv novectors.o main.o ../common/libc.a ../common/libm.a ../common/libgcc.a -T ../common/memmap -o main.elf
+common.o : ../common/common.c
+	$(RISCVGNU)-gcc $(COPS) -I$(INC) -c ../common/common.c -o common.o
+
+main.bin : ../common/memmap novectors.o main.o common.o
+	$(RISCVGNU)-ld  -m elf32lriscv novectors.o main.o common.o ../common/libc.a ../common/libm.a ../common/libgcc.a -T ../common/memmap -o main.elf
 
 	$(RISCVGNU)-objdump -D main.elf > main.list
 	$(RISCVGNU)-objcopy main.elf -S -O binary main.bin

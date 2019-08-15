@@ -1,11 +1,15 @@
+#include "../common/common.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdint.h>
 
 int errno = 0;
 #include <errno.h>
+
 
 #define SIZE_X (800)
 #define SIZE_Y (600)
@@ -53,16 +57,6 @@ int errno = 0;
 int end = 1048576 * 16;
 
 
-volatile char* output = 0x20000000;
-
-void printString(char* string) {
-    char* ptr = string;
-
-    while (*ptr) {
-        *output = *ptr;
-        ptr++;
-    }
-}
 
 int
 _write (int   file,
@@ -70,7 +64,7 @@ _write (int   file,
         int   len)
 {
 //    errno = ENOSYS;
-    printString(ptr);
+    debug(ptr);
 
     return len;
 }
@@ -264,14 +258,6 @@ void setStandardValues(Configuration* config)
 /// @return int ERROR_OUT_OF_MEMORY if Out-of-memory error occurs,
 ///         SUCCESS if successful.
 //
-volatile char* FRAMEBUFFER_BASE = 0x40000000;
-
-void draw_pixel(int x, int y, char r, char g, char b) {
-    char* addr = FRAMEBUFFER_BASE + y * SIZE_X * BYTE_PER_PIXEL + x * BYTE_PER_PIXEL;
-    *addr++ = r;
-    *addr++ = g;
-    *addr++ = b;
-}
 
 
 int writeBitmap(ImageMatrix* matrix,
@@ -283,7 +269,13 @@ int writeBitmap(ImageMatrix* matrix,
         {
             for (int col = 0; col < config->image_width_; col++) {
                 Pixel p = matrix->pixels_[line][col];
-                draw_pixel(col, line, p.red_, p.green_, p.blue_);
+                uint32_t temp = 0;
+
+                temp = p.red_ << 24;
+                temp |= p.green_ << 16;
+                temp |= p.blue_ << 8;
+
+                draw_pixel(col, line, temp);
             }
         }
 }
@@ -820,10 +812,6 @@ void displayErrorMessage(int error_code)
 //
 void notmain(void)
 {
-    printf("Hello World %f\n", 50.0);
-
-    return;
-
     CommandLineParameters parameters;
     Configuration config;
     CalculatedPositions positions;
@@ -847,18 +835,18 @@ void notmain(void)
 
     if (!error)
     {
-        printString("Flight path\n");
+        puts("Flight path\n");
         error = calculateFlightPath(&positions, &config, &parameters);
     }
     if (!error)
     {
-        printString("prepare\n");
+        puts("prepare\n");
         error = prepareImageMatrix(&matrix, &config);
     }
     if (!error)
     {
         // drawFligthPath does not raise any errors.
-        printString("draw\n");
+        puts("draw\n");
         drawFlightPath(&matrix, &positions);
         error = writeBitmap(&matrix, &config, &parameters);
     }
@@ -870,7 +858,7 @@ void notmain(void)
 
     freeResources(&matrix, &positions);
 
-//    for (;;) ;
+    for (;;) ;
 
     return error;
 }
