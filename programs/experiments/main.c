@@ -5,6 +5,7 @@ unsigned int GET32 ( unsigned int );
 void  dummy ( unsigned int );
 //-------------------------------------------------------------------
 
+#include <string.h>
 
 #define SIZE_X (800)
 #define SIZE_Y (600)
@@ -18,8 +19,7 @@ volatile char* FRAMEBUFFER_BASE = 0x40000000;
 
 void default_handler(void)__attribute__((interrupt));;
 void default_handler(void) {
-    *output = 55;
-    *FRAMEBUFFER_BASE = 100;
+    printString("");
 }
 
 void reverse(char s[]);
@@ -86,6 +86,10 @@ void draw_pixel(int x, int y, char r, char g, char b) {
 int notmain ( void )
 {
     char buffer[100];
+    printString("Hello World\n");
+    printString("Hello World\n");
+    printString("Hello World\n");
+    printString("Hello World\n");
     printString("Hello World\n");
 
 

@@ -33,7 +33,6 @@ impl MemoryDevice for Video {
 
     fn write_byte(&mut self, _address: Address, _val: u8) {
         let relative_address = self.get_relative_address(_address) as usize;
-        //        self.framebuffer[relative_address] = _val;
         unsafe {
             FRAMEBUFFER[relative_address] = _val;
         }
@@ -52,6 +51,7 @@ impl MemoryDevice for Video {
 
 impl Video {
     pub fn new(offset: Address) -> Video {
+        #[cfg(not(test))]
         thread::spawn(move || {
             let sdl_context = sdl2::init().unwrap();
             let video_subsystem = sdl_context.video().unwrap();

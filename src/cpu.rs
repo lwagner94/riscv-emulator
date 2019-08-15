@@ -1,9 +1,9 @@
 use crate::instruction::Instruction;
 use crate::instruction::WrappedInstruction;
+use crate::interrupt::InterruptController;
 use crate::memory::addressspace::{AddressSpace, MemoryDevice};
 use crate::util;
 use std::collections::HashSet;
-
 
 pub struct Cpu {
     registers: [u32; 32],
@@ -11,6 +11,8 @@ pub struct Cpu {
     running: bool,
     breakpoints: HashSet<u32>,
     cycle_counter: u64,
+    interrupt_controller: InterruptController,
+    saved_pc: u32
 }
 
 impl Cpu {
@@ -21,6 +23,8 @@ impl Cpu {
             running: true,
             breakpoints: HashSet::new(),
             cycle_counter: 0,
+            interrupt_controller: InterruptController::new(),
+            saved_pc: 0u32
         }
     }
 
@@ -39,6 +43,11 @@ impl Cpu {
         ];
 
         while self.running {
+            if let Some(new_pc) = self.interrupt_controller.check_for_interrupt(memory) {
+                self.saved_pc = self.pc;
+                self.pc = new_pc;
+            }
+
             if instruction_cache[self.pc as usize].instruction == Instruction::INVALID {
                 instruction_cache[self.pc as usize] =
                     WrappedInstruction::new(memory.read_word(self.pc));
@@ -340,6 +349,9 @@ impl Cpu {
             }
             Instruction::EBREAK => {
                 self.running = false;
+            }
+            Instruction::MRET => {
+                self.pc = self.saved_pc - size;
             }
             Instruction::INVALID => panic!("Invalid Instruction detected"),
             _ => panic!("Instruction {:?} not implemented", instruction),
