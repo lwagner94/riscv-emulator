@@ -1,4 +1,5 @@
 
+#include <string.h>
 
 #include "../common/common.h"
 
@@ -10,7 +11,6 @@ void* end = 0x100000;
 
 void default_handler(void)__attribute__((interrupt));;
 void default_handler(void) {
-
 }
 
 void reverse(char s[]);
@@ -62,9 +62,9 @@ int fib(int n){
 int notmain ( void )
 {
     char buffer[100];
+
     debug("Hello World\n");
-
-
+    
     int result = fib(40);
 
     itoa(result, buffer);

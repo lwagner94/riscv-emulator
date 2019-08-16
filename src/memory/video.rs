@@ -34,7 +34,6 @@ impl MemoryDevice for Video {
 
     fn write_byte(&mut self, _address: Address, _val: u8) {
         let relative_address = self.get_relative_address(_address) as usize;
-        //        self.framebuffer[relative_address] = _val;
         unsafe {
             FRAMEBUFFER[relative_address] = _val;
         }

@@ -7,6 +7,7 @@ use crate::memory::addressspace::AddressSpace;
 mod cpu;
 mod gdbserver;
 mod instruction;
+mod interrupt;
 mod loader;
 mod memory;
 mod util;

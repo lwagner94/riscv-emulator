@@ -66,6 +66,7 @@ pub enum Instruction {
     AMOMAXW(usize, usize, usize),
     AMOMINUW(usize, usize, usize),
     AMOMAXUW(usize, usize, usize),
+    MRET,
     INVALID,
 }
 
@@ -147,10 +148,14 @@ impl Instruction {
                 let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
                 let imm12 = shift_and_mask(code, 20, IMMEDIATE_12_MASK);
 
-                if rd == 0 && funct3 == 0 && rs1 == 0 && imm12 == 1 {
-                    EBREAK
-                } else {
+                if rd != 0 || funct3 != 0 || rs1 != 0 {
                     INVALID
+                } else {
+                    match imm12 {
+                        0b1 => EBREAK,
+                        0b001100000010 => MRET,
+                        _ => INVALID,
+                    }
                 }
             }
             0b010_1111 => Instruction::match_atomic(code),
@@ -509,6 +514,11 @@ mod test {
         #[test]
         fn test_ebreak() {
             assert_eq!(Instruction::new(0x00100073), Instruction::EBREAK);
+        }
+
+        #[test]
+        fn test_mret() {
+            assert_eq!(Instruction::new(0x30200073), Instruction::MRET);
         }
     }
 }
