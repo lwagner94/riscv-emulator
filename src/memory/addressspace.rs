@@ -2,6 +2,9 @@ use super::ram::Ram;
 use super::video::Video;
 use crate::memory::debug::Debug;
 use std::borrow::Borrow;
+use std::mem::size_of_val;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
 
 pub type Address = u32;
 
@@ -19,11 +22,14 @@ pub trait MemoryDevice {
     }
 
     fn offset(&self) -> Address;
+
+    fn check_for_interrupt(&mut self) -> Option<Address>;
 }
 
 pub struct AddressSpace {
     memory_devices: [Box<dyn MemoryDevice>; 3],
     address_lut: [u32; 4096],
+    interrupt_flags: Arc<AtomicU32>,
 }
 
 impl AddressSpace {
@@ -35,14 +41,18 @@ impl AddressSpace {
         lut[512] = 1;
         lut[1024] = 2;
         lut[1025] = 2;
+        lut[1026] = 2;
+
+        let interrupt_flags = Arc::new(AtomicU32::new(0));
 
         AddressSpace {
             memory_devices: [
                 Box::new(Ram::new(0)),
                 Box::new(Debug::new(debug_address)),
-                Box::new(Video::new(video_address)),
+                Box::new(Video::new(video_address, interrupt_flags.clone())),
             ],
             address_lut: lut,
+            interrupt_flags,
         }
     }
 
@@ -96,7 +106,47 @@ impl MemoryDevice for AddressSpace {
     fn offset(&self) -> Address {
         0
     }
+
+    #[inline(always)]
+    fn check_for_interrupt(&mut self) -> Option<Address> {
+        let interrupt_flag: u32 = self.interrupt_flags.load(Ordering::SeqCst);
+        if let Some(nr) = get_interrupt_number(interrupt_flag) {
+            self.interrupt_flags.store(0, Ordering::SeqCst);
+            Some(0x24)
+        } else {
+            None
+        }
+    }
+}
+
+fn get_interrupt_number(flag: u32) -> Option<u32> {
+    let leading = flag.leading_zeros();
+    let size = (size_of_val(&flag) * 8) as u32;
+
+    if leading != size {
+        Some(size - leading - 1)
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]
-mod test {}
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_get_interrupt_number() {
+        assert_eq!(
+            get_interrupt_number(0b0000_0000_0000_0000_0000_0000_0000_0000u32),
+            None
+        );
+        assert_eq!(
+            get_interrupt_number(0b0000_0000_0000_0000_0000_0000_0000_0001u32),
+            Some(0)
+        );
+        assert_eq!(
+            get_interrupt_number(0b0000_0000_0000_0000_0000_0000_0000_1111u32),
+            Some(3)
+        );
+    }
+}

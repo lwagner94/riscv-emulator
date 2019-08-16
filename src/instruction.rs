@@ -153,7 +153,7 @@ impl Instruction {
                 } else {
                     match imm12 {
                         0b1 => EBREAK,
-                        0b001100000010 => MRET,
+                        0b0011_0000_0010 => MRET,
                         _ => INVALID,
                     }
                 }

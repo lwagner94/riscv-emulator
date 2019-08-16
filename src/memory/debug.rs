@@ -54,4 +54,8 @@ impl MemoryDevice for Debug {
     fn offset(&self) -> Address {
         self.offset
     }
+
+    fn check_for_interrupt(&mut self) -> Option<Address> {
+        None
+    }
 }
