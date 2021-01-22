@@ -1,8 +1,10 @@
 use crate::instruction::Instruction;
 use crate::instruction::WrappedInstruction;
-use crate::memory::addressspace::{AddressSpace, MemoryDevice};
+use crate::memory::addressspace::{AddressSpace, MemoryDevice, Address};
 use crate::util;
 use std::collections::HashSet;
+use core::cmp::max;
+use core::cmp::min;
 
 pub struct Cpu {
     registers: [u32; 32],
@@ -100,12 +102,14 @@ impl Cpu {
         size: u32,
         memory: &mut AddressSpace,
     ) {
+        // println!("{:x}, {:?}", self.pc, instruction);
+
         match *instruction {
             Instruction::LUI(rd, imm) => {
                 self.set_register(rd, imm << 12);
             }
             Instruction::AUIPC(rd, imm) => {
-                let result = self.pc + (imm << 12);
+                let result = self.pc.wrapping_add((imm << 12));
                 self.set_register(rd, result)
             }
             Instruction::JAL(rd, imm) => {
@@ -119,6 +123,7 @@ impl Cpu {
             }
             Instruction::JALR(rd, rs1, imm) => {
                 let mut new_pc = self.get_register(rs1) as i32;
+                let i = imm as i32;
                 new_pc = new_pc.wrapping_add(imm as i32);
                 let result = self.pc + size;
                 self.pc = ((new_pc as u32) & !1u32) - size;
@@ -350,7 +355,110 @@ impl Cpu {
             Instruction::MRET => {
                 self.pc = self.saved_pc - size;
             }
-            Instruction::INVALID => panic!("Invalid Instruction detected"),
+            Instruction::LRW(rd, rs1, _) => {
+                // TODO: 64bit: Sign-Extension ?!?
+                let addr = self.get_register(rs1) as Address;
+                let v = memory.read_word(addr);
+                self.set_register(rd, v);
+            }
+            Instruction::SCW(rd, rs1, rs2) => {
+                let word = self.get_register(rs2);
+                let addr = self.get_register(rs1) as Address;
+                memory.write_word(addr, word);
+                self.set_register(rd, 0); // Always succeed for now!
+            }
+            Instruction::AMOSWAPW(rd, rs1, rs2) => {
+                let addr = self.get_register(rs1) as Address;
+                let op1 = memory.read_word(addr);
+                self.set_register(rd, op1);
+
+                let op2 = self.get_register(rs2);
+                memory.write_word(addr, op2);
+
+            }
+            Instruction::AMOADDW(rd, rs1, rs2) => {
+                let addr = self.get_register(rs1) as Address;
+                let op1 = memory.read_word(addr);
+                let op2 = self.get_register(rs2);
+                let result = op1.wrapping_add(op2);
+                memory.write_word(addr, result);
+                self.set_register(rd, op1);
+            }
+            Instruction::AMOANDW(rd, rs1, rs2) => {
+                let addr = self.get_register(rs1) as Address;
+                let op1 = memory.read_word(addr);
+                let op2 = self.get_register(rs2);
+                let result = op1 & op2;
+                memory.write_word(addr, result);
+                self.set_register(rd, op1);
+            }
+            Instruction::AMOORW(rd, rs1, rs2) => {
+                let addr = self.get_register(rs1) as Address;
+                let op1 = memory.read_word(addr);
+                let op2 = self.get_register(rs2);
+                let result = op1 | op2;
+                memory.write_word(addr, result);
+                self.set_register(rd, op1);
+            }
+            Instruction::AMOXORW(rd, rs1, rs2) => {
+                let addr = self.get_register(rs1) as Address;
+                let op1 = memory.read_word(addr);
+                let op2 = self.get_register(rs2);
+                let result = op1 ^ op2;
+                memory.write_word(addr, result);
+                self.set_register(rd, op1);
+            }
+            Instruction::AMOMAXW(rd, rs1, rs2) => {
+                let addr = self.get_register(rs1) as Address;
+                let op1 = memory.read_word(addr);
+                let op2 = self.get_register(rs2);
+                let result = max(op1 as i32, op2 as i32) as u32;
+                memory.write_word(addr, result);
+                self.set_register(rd, op1);
+            }
+            Instruction::AMOMAXUW(rd, rs1, rs2) => {
+                let addr = self.get_register(rs1) as Address;
+                let op1 = memory.read_word(addr);
+                let op2 = self.get_register(rs2);
+                let result = max(op1, op2);
+                memory.write_word(addr, result);
+                self.set_register(rd, op1);
+            }
+            Instruction::AMOMINW(rd, rs1, rs2) => {
+                let addr = self.get_register(rs1) as Address;
+                let op1 = memory.read_word(addr);
+                let op2 = self.get_register(rs2);
+                let result = min(op1 as i32, op2 as i32) as u32;
+                memory.write_word(addr, result);
+                self.set_register(rd, op1);
+            }
+            Instruction::AMOMINUW(rd, rs1, rs2) => {
+                let addr = self.get_register(rs1) as Address;
+                let op1 = memory.read_word(addr);
+                let op2 = self.get_register(rs2);
+                let result = min(op1, op2);
+                memory.write_word(addr, result);
+                self.set_register(rd, op1);
+            }
+            Instruction::CSRRW => {
+                println!("Unimplemented instruction CSRRW at pc=0x{:x}", self.pc);
+            }
+            Instruction::CSRRS => {
+                println!("Unimplemented instruction CSRRS at pc=0x{:x}", self.pc);
+            }
+            Instruction::CSRRC => {
+                println!("Unimplemented instruction CSRRC at pc=0x{:x}", self.pc);
+            }
+            Instruction::CSRRWI => {
+                println!("Unimplemented instruction CSRRWI at pc=0x{:x}", self.pc);
+            }
+            Instruction::CSRRSI => {
+                println!("Unimplemented instruction CSRRSI at pc=0x{:x}", self.pc);
+            }
+            Instruction::CSRRCI => {
+                println!("Unimplemented instruction CSRRCI at pc=0x{:x}", self.pc);
+            }
+            Instruction::INVALID => panic!("Invalid Instruction at pc=0x{:x} detected", self.pc),
             _ => panic!("Instruction {:?} not implemented", instruction),
         }
     }
@@ -611,7 +719,7 @@ mod test {
             cpu.set_register(2, base);
             cpu.pc = 80;
 
-            cpu.execute_instruction(&Instruction::JALR(1, 2, offset as u32), 4, &mut memory);
+            cpu.execute_instruction(&Instruction::JALR(1, 2, offset as i32), 4, &mut memory);
             assert_eq!(cpu.get_register(1), 84);
             assert_eq!(cpu.pc, ((base as i32 + offset - 4) as u32) & !1u32);
         }

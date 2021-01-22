@@ -12,7 +12,7 @@ pub enum Instruction {
     LUI(usize, u32),
     AUIPC(usize, u32),
     JAL(usize, u32),
-    JALR(usize, usize, u32),
+    JALR(usize, usize, i32),
     BEQ(usize, usize, u32),
     BNE(usize, usize, u32),
     BLT(usize, usize, u32),
@@ -67,6 +67,15 @@ pub enum Instruction {
     AMOMINUW(usize, usize, usize),
     AMOMAXUW(usize, usize, usize),
     MRET,
+
+    // Zicsr
+    CSRRW,
+    CSRRS,
+    CSRRC,
+    CSRRWI,
+    CSRRSI,
+    CSRRCI,
+
     INVALID,
 }
 
@@ -128,11 +137,11 @@ impl Instruction {
             0b110_0111 => {
                 let rd = shift_and_mask(code, 7, REGISTER_MASK);
                 let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
-                let immediate = shift_and_mask(code, 20, IMMEDIATE_12_MASK) as u32;
+                let immediate = shift_and_mask(code, 20, IMMEDIATE_12_MASK) as i32;
                 let funct3 = shift_and_mask(code, 12, FUNCT3_MASK);
 
                 if funct3 == 0 {
-                    JALR(rd, rs1, immediate)
+                    JALR(rd, rs1, sign_extend(immediate, 12))
                 } else {
                     INVALID
                 }
@@ -148,15 +157,24 @@ impl Instruction {
                 let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
                 let imm12 = shift_and_mask(code, 20, IMMEDIATE_12_MASK);
 
-                if rd != 0 || funct3 != 0 || rs1 != 0 {
-                    INVALID
-                } else {
-                    match imm12 {
+                match funct3 {
+                    0b000 => match imm12 {
                         0b1 => EBREAK,
                         0b0011_0000_0010 => MRET,
                         _ => INVALID,
-                    }
+                    },
+                    // TODO: Arg decode!
+                    0b001 => CSRRW,
+                    0b010 => CSRRS,
+                    0b011 => CSRRC,
+                    0b101 => CSRRWI,
+                    0b110 => CSRRSI,
+                    0b111 => CSRRCI,
+                    _ => INVALID
                 }
+
+
+
             }
             0b010_1111 => Instruction::match_atomic(code),
             _ => INVALID,

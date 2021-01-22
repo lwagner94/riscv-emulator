@@ -9,3 +9,4 @@ test.S
 /target
 **/*.rs.bk
 callgrind.out.*
+.vscode
