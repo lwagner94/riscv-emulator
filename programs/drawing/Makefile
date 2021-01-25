@@ -1,4 +1,4 @@
-RISCVGNU = riscv64-unknown-elf
+RISCVGNU = riscv64-elf
 
 
 AOPS = -march=rv32ima -g -mabi=ilp32
