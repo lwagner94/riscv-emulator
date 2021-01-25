@@ -18,7 +18,7 @@ pub trait MemoryDevice {
     fn write_word(&mut self, address: Address, val: u32);
 
     fn get_relative_address(&self, address: Address) -> Address {
-        (address - self.offset())
+        address - self.offset()
     }
 
     fn offset(&self) -> Address;

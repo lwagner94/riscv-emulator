@@ -109,7 +109,7 @@ impl Cpu {
                 self.set_register(rd, imm << 12);
             }
             Instruction::AUIPC(rd, imm) => {
-                let result = self.pc.wrapping_add((imm << 12));
+                let result = self.pc.wrapping_add(imm << 12);
                 self.set_register(rd, result)
             }
             Instruction::JAL(rd, imm) => {

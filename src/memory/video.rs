@@ -132,8 +132,7 @@ impl Video {
     }
 
     fn start_render_thread(context: Arc<SharedVideoContext>) {
-        #[cfg(not(test))]
-        thread::spawn(move || {
+        let func = move || {
             let sdl_context = sdl2::init().unwrap();
             let video_subsystem = sdl_context.video().unwrap();
 
@@ -199,6 +198,10 @@ impl Video {
                 canvas.present();
                 thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             }
-        });
+        };
+
+
+        #[cfg(not(test))]
+        thread::spawn(func);
     }
 }
