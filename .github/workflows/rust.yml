@@ -17,6 +17,7 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
+        sudo apt update -y
         sudo apt install libsdl2-dev
     - uses: actions/checkout@v2
     - name: Build
