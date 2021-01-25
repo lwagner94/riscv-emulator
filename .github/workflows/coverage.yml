@@ -22,7 +22,7 @@ jobs:
     - name: Run grcov
       env:
         PROJECT_NAME: "{{PROJECT_NAME}}"
-        RUSTFLAGS: "--Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+        RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
         CARGO_INCREMENTAL: 0
       run: |
         cargo build --verbose --no-default-features
