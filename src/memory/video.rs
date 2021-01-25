@@ -1,10 +1,20 @@
 use super::addressspace::Address;
 use super::addressspace::MemoryDevice;
 use crate::util;
+
+
+#[cfg(feature = "framebuffer")]
 use sdl2::event::Event;
+
+#[cfg(feature = "framebuffer")]
 use sdl2::pixels::PixelFormatEnum;
+
+#[cfg(feature = "framebuffer")]
 use sdl2::rect::Rect;
+
+#[cfg(feature = "framebuffer")]
 use sdl2::render::Texture;
+
 use std::cell::UnsafeCell;
 use std::process;
 use std::ptr::copy_nonoverlapping;
@@ -131,6 +141,12 @@ impl Video {
         }
     }
 
+    #[cfg(not(feature = "framebuffer"))]
+    fn start_render_thread(context: Arc<SharedVideoContext>) {
+
+    }
+
+    #[cfg(feature = "framebuffer")]
     fn start_render_thread(context: Arc<SharedVideoContext>) {
         let func = move || {
             let sdl_context = sdl2::init().unwrap();

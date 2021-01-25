@@ -10,7 +10,11 @@ description = "riscv-emu is an emulator for the riscv32imac architecture"
 [dependencies]
 gdb-remote-protocol = { path = "rust-gdb-remote-protocol" }
 clap = "2.33.0"
-sdl2 = "0.32.2"
+sdl2 = {version = "0.32.2", optional=true}
 
 [profile.release]
 #lto = true
+
+[features]
+default = ["framebuffer"]
+framebuffer = ["sdl2"]
