@@ -19,6 +19,6 @@ jobs:
     - name: Build
       run: | 
         rustc --version
-        cargo build
+        cargo build --no-default-features
     - name: Run tests
       run: cargo test --no-default-features
