@@ -1,5 +1,4 @@
 use crate::memory::addressspace::{Address, MemoryDevice};
-use crate::util;
 use crate::AddressSpace;
 use crate::Cpu;
 use std::net::TcpListener;
@@ -34,8 +33,7 @@ impl SingleThreadOps for RISCVTarget {
                 let mut cycles = 0;
                 loop {
                     if let Some(event) = self.cpu.step(&mut self.memory) {
-                        println!("Breka");
-                        return Ok(StopReason::SwBreak);
+                        break event;
                     };
 
                     // check for GDB interrupt every 1024 instructions
@@ -84,8 +82,8 @@ impl SingleThreadOps for RISCVTarget {
         start_addr: <Self::Arch as Arch>::Usize,
         data: &mut [u8],
     ) -> TargetResult<(), Self> {
-        for i in 0..data.len() {
-            data[i] = self.memory.read_byte(start_addr + i as Address);
+        for (i, byte) in data.iter_mut().enumerate() {
+            *byte = self.memory.read_byte(start_addr + i as Address);
         }
 
         Ok(())
@@ -96,8 +94,8 @@ impl SingleThreadOps for RISCVTarget {
         start_addr: <Self::Arch as Arch>::Usize,
         data: &[u8],
     ) -> TargetResult<(), Self> {
-        for i in 0..data.len() {
-            self.memory.write_byte(start_addr + i as Address, data[i]);
+        for (i, byte) in data.iter().enumerate() {
+            self.memory.write_byte(start_addr + i as Address, *byte);
         }
 
         Ok(())

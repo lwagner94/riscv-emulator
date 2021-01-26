@@ -15,20 +15,18 @@ use sdl2::rect::Rect;
 use sdl2::render::Texture;
 
 use std::cell::UnsafeCell;
-use std::process;
-use std::ptr::copy_nonoverlapping;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32};
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 
 const SIZE_X: u32 = 800;
 const SIZE_Y: u32 = 600;
 const VEC_SIZE: usize = (SIZE_X * SIZE_Y * 4) as usize;
 
 const MEGABYTE: usize = 1 << 20;
-const FRAMEBUFFER_START: usize = MEGABYTE * 0;
-const FRAMEBUFFER_END: usize = MEGABYTE * 2 - 1;
+
+// TODO:
+// const FRAMEBUFFER_START: usize = MEGABYTE * 0;
+// const FRAMEBUFFER_END: usize = MEGABYTE * 2 - 1;
 const KEYBUFFER_START: usize = MEGABYTE * 2;
 const KEYBUFFER_END: usize = KEYBUFFER_START + 7;
 
@@ -39,17 +37,17 @@ pub struct Video {
 
 struct SharedVideoContext {
     framebuffer: UnsafeCell<Vec<u8>>,
-    interrupt_flags: Arc<AtomicU32>,
+    // interrupt_flags: Arc<AtomicU32>,
     keybuffer: UnsafeCell<Vec<u8>>,
 }
 
 unsafe impl Sync for SharedVideoContext {}
 
 impl SharedVideoContext {
-    fn new(interrupt_flags: Arc<AtomicU32>) -> Self {
+    fn new(_interrupt_flags: Arc<AtomicU32>) -> Self {
         Self {
             framebuffer: UnsafeCell::new(vec![0u8; VEC_SIZE]),
-            interrupt_flags,
+            // interrupt_flags,
             keybuffer: UnsafeCell::new(vec![0u8; 2 * 4]),
         }
     }
@@ -70,7 +68,7 @@ impl MemoryDevice for Video {
         let relative_address = self.get_relative_address(_address) as usize;
 
         match relative_address {
-            KEYBUFFER_START...KEYBUFFER_END => {
+            KEYBUFFER_START..=KEYBUFFER_END => {
                 let keybuffer_address = relative_address - KEYBUFFER_START;
 
                 let keybuffer_ref;
@@ -141,7 +139,7 @@ impl Video {
     }
 
     #[cfg(not(feature = "framebuffer"))]
-    fn start_render_thread(context: Arc<SharedVideoContext>) {}
+    fn start_render_thread(_: Arc<SharedVideoContext>) {}
 
     #[cfg(feature = "framebuffer")]
     fn start_render_thread(context: Arc<SharedVideoContext>) {
@@ -172,7 +170,7 @@ impl Video {
                 }
                 for event in event_pump.poll_iter() {
                     match event {
-                        Event::Quit { .. } => process::exit(0),
+                        Event::Quit { .. } => std::process::exit(0),
                         Event::KeyDown {
                             keycode: Some(code),
                             ..
@@ -180,7 +178,7 @@ impl Video {
                             util::write_u32_to_byteslice(&mut keybuffer[0..4], 1);
                             util::write_u32_to_byteslice(&mut keybuffer[4..8], code as u32);
 
-                            context.interrupt_flags.store(0x01, Ordering::SeqCst);
+                            // context.interrupt_flags.store(0x01, Ordering::SeqCst);
                         }
                         Event::KeyUp {
                             keycode: Some(code),
@@ -188,7 +186,7 @@ impl Video {
                         } => {
                             util::write_u32_to_byteslice(&mut keybuffer[0..4], 0);
                             util::write_u32_to_byteslice(&mut keybuffer[4..8], code as u32);
-                            context.interrupt_flags.store(0x01, Ordering::SeqCst);
+                            // context.interrupt_flags.store(0x01, Ordering::SeqCst);
                         }
                         _ => {}
                     }
@@ -200,7 +198,7 @@ impl Video {
 
                         unsafe {
                             let framebuffer_vec = &*context.get_framebuffer();
-                            copy_nonoverlapping(framebuffer_vec.as_ptr(), dest_ptr, VEC_SIZE);
+                            std::ptr::copy_nonoverlapping(framebuffer_vec.as_ptr(), dest_ptr, VEC_SIZE);
                         }
                     })
                     .unwrap();
@@ -209,11 +207,11 @@ impl Video {
                     .unwrap();
 
                 canvas.present();
-                thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+                std::thread::sleep(std::time::Duration::new(0, 1_000_000_000u32 / 60));
             }
         };
 
         #[cfg(not(test))]
-        thread::spawn(func);
+        std::thread::spawn(func);
     }
 }

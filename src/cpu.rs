@@ -4,10 +4,11 @@ use crate::memory::addressspace::{Address, AddressSpace, MemoryDevice};
 use crate::util;
 use core::cmp::max;
 use core::cmp::min;
+
+#[cfg(feature = "debugger")]
 use std::collections::HashSet;
 
-use crate::cpu::CpuEvent::{Breakpoint, Halted};
-
+#[allow(dead_code)]
 pub enum CpuEvent {
     Halted,
     Breakpoint,
@@ -19,6 +20,7 @@ pub struct Cpu {
     running: bool,
     cycle_counter: u64,
     saved_pc: u32,
+    #[cfg(feature = "debugger")]
     breakpoints: HashSet<Address>,
 }
 
@@ -30,6 +32,7 @@ impl Cpu {
             running: true,
             cycle_counter: 0,
             saved_pc: 0u32,
+            #[cfg(feature = "debugger")]
             breakpoints: HashSet::new(),
         }
     }
@@ -39,7 +42,7 @@ impl Cpu {
         *self = Cpu::new();
     }
 
-    pub fn run(&mut self, memory: &mut AddressSpace) {
+    pub fn run(&mut self, memory: &mut AddressSpace) -> Option<CpuEvent> {
         let mut instruction_cache: Vec<WrappedInstruction> = vec![
             WrappedInstruction {
                 instruction: Instruction::INVALID,
@@ -68,6 +71,8 @@ impl Cpu {
             self.pc += size;
             self.cycle_counter += 1;
         }
+
+        Some(CpuEvent::Halted)
     }
 
     #[cfg(feature = "debugger")]
@@ -84,9 +89,9 @@ impl Cpu {
         let breakpoint_hit = self.is_breakpoint(self.pc);
 
         if !self.running {
-            Some(Halted)
+            Some(CpuEvent::Halted)
         } else if breakpoint_hit {
-            Some(Breakpoint)
+            Some(CpuEvent::Breakpoint)
         } else {
             None
         }
@@ -133,7 +138,6 @@ impl Cpu {
             }
             Instruction::JALR(rd, rs1, imm) => {
                 let mut new_pc = self.get_register(rs1) as i32;
-                let i = imm as i32;
                 new_pc = new_pc.wrapping_add(imm as i32);
                 let result = self.pc + size;
                 self.pc = ((new_pc as u32) & !1u32) - size;
@@ -468,7 +472,6 @@ impl Cpu {
                 println!("Unimplemented instruction CSRRCI at pc=0x{:x}", self.pc);
             }
             Instruction::INVALID => panic!("Invalid Instruction at pc=0x{:x} detected", self.pc),
-            _ => panic!("Instruction {:?} not implemented", instruction),
         }
     }
 
@@ -484,6 +487,7 @@ impl Cpu {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_pc(&self) -> u32 {
         self.pc
     }
@@ -497,14 +501,17 @@ impl Cpu {
         self.cycle_counter
     }
 
+    #[cfg(feature = "debugger")]
     pub fn add_breakpoint(&mut self, address: Address) {
         self.breakpoints.insert(address);
     }
 
+    #[cfg(feature = "debugger")]
     pub fn remove_breakpoint(&mut self, address: Address) {
         self.breakpoints.remove(&address);
     }
 
+    #[cfg(feature = "debugger")]
     fn is_breakpoint(&self, address: Address) -> bool {
         self.breakpoints.contains(&address)
     }

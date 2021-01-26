@@ -152,9 +152,9 @@ impl Instruction {
             0b001_0011 => Instruction::match_arithmetic_immediate(code),
             0b011_0011 => Instruction::match_arithmetic(code),
             0b111_0011 => {
-                let rd = shift_and_mask(code, 7, REGISTER_MASK);
+                let _rd = shift_and_mask(code, 7, REGISTER_MASK);
                 let funct3 = shift_and_mask(code, 12, FUNCT3_MASK);
-                let rs1 = shift_and_mask(code, 15, REGISTER_MASK);
+                let _rs1 = shift_and_mask(code, 15, REGISTER_MASK);
                 let imm12 = shift_and_mask(code, 20, IMMEDIATE_12_MASK);
 
                 match funct3 {
