@@ -64,5 +64,4 @@ mod test {
     fn test_sign_extend() {
         assert_eq!(sign_extend(0b100000000000, 12), -2048)
     }
-
 }

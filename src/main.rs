@@ -5,6 +5,7 @@ use crate::cpu::Cpu;
 use crate::memory::addressspace::AddressSpace;
 
 mod cpu;
+mod error;
 mod gdbserver;
 mod instruction;
 mod loader;
@@ -20,7 +21,15 @@ fn main() {
     let args = parse_commandline();
 
     let mut memory = AddressSpace::new();
-    loader::load_program(&args.path, &mut memory).unwrap();
+
+    match loader::load_program(&args.path, &mut memory) {
+        Ok(_) => {}
+        Err(error) => {
+            eprintln!("Error: {:?}", error);
+            return;
+        }
+    };
+
     let mut cpu = Cpu::new();
 
     if args.debug_enabled {

@@ -170,11 +170,8 @@ impl Instruction {
                     0b101 => CSRRWI,
                     0b110 => CSRRSI,
                     0b111 => CSRRCI,
-                    _ => INVALID
+                    _ => INVALID,
                 }
-
-
-
             }
             0b010_1111 => Instruction::match_atomic(code),
             _ => INVALID,
@@ -384,7 +381,6 @@ mod test {
                 Instruction::JALR(1, 2, 0x100)
             );
         }
-
     }
 
     mod branch {

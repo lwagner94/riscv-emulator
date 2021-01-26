@@ -2,7 +2,6 @@ use super::addressspace::Address;
 use super::addressspace::MemoryDevice;
 use crate::util;
 
-
 #[cfg(feature = "framebuffer")]
 use sdl2::event::Event;
 
@@ -142,9 +141,7 @@ impl Video {
     }
 
     #[cfg(not(feature = "framebuffer"))]
-    fn start_render_thread(context: Arc<SharedVideoContext>) {
-
-    }
+    fn start_render_thread(context: Arc<SharedVideoContext>) {}
 
     #[cfg(feature = "framebuffer")]
     fn start_render_thread(context: Arc<SharedVideoContext>) {
@@ -215,7 +212,6 @@ impl Video {
                 thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             }
         };
-
 
         #[cfg(not(test))]
         thread::spawn(func);
