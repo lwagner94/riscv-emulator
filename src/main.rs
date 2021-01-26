@@ -4,9 +4,10 @@ use std::time::SystemTime;
 use crate::cpu::Cpu;
 use crate::memory::addressspace::AddressSpace;
 
+#[cfg(feature = "gdbstub")]
+mod gdbserver;
 mod cpu;
 mod error;
-mod gdbserver;
 mod instruction;
 mod loader;
 mod memory;
@@ -33,7 +34,9 @@ fn main() {
     let mut cpu = Cpu::new();
 
     if args.debug_enabled {
+        #[cfg(feature = "gdbstub")]
         gdbserver::start_server(cpu, memory);
+
     } else {
         let before = SystemTime::now();
         cpu.run(&mut memory);

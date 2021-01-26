@@ -6,13 +6,20 @@ use core::cmp::max;
 use core::cmp::min;
 use std::collections::HashSet;
 
+use crate::cpu::CpuEvent::{Breakpoint, Halted};
+
+pub enum CpuEvent {
+    Halted,
+    Breakpoint,
+}
+
 pub struct Cpu {
     registers: [u32; 32],
     pc: u32,
     running: bool,
-    breakpoints: HashSet<u32>,
     cycle_counter: u64,
     saved_pc: u32,
+    breakpoints: HashSet<Address>,
 }
 
 impl Cpu {
@@ -21,9 +28,9 @@ impl Cpu {
             registers: [0u32; 32],
             pc: 0u32,
             running: true,
-            breakpoints: HashSet::new(),
             cycle_counter: 0,
             saved_pc: 0u32,
+            breakpoints: HashSet::new(),
         }
     }
 
@@ -63,7 +70,8 @@ impl Cpu {
         }
     }
 
-    pub fn step(&mut self, memory: &mut AddressSpace) {
+    #[cfg(feature = "debugger")]
+    pub fn step(&mut self, memory: &mut AddressSpace) -> Option<CpuEvent> {
         let wrapped_instruction = WrappedInstruction::new(memory.read_word(self.pc));
 
         let instruction = &wrapped_instruction.instruction;
@@ -72,13 +80,15 @@ impl Cpu {
         self.execute_instruction(instruction, size, memory);
         self.pc += size;
         self.cycle_counter += 1;
-    }
 
-    pub fn cont(&mut self, memory: &mut AddressSpace) {
-        let mut breakpoint_hit = false;
-        while self.running && !breakpoint_hit {
-            self.step(memory);
-            breakpoint_hit = self.breakpoints.contains(&self.pc);
+        let breakpoint_hit = self.is_breakpoint(self.pc);
+
+        if !self.running {
+            Some(Halted)
+        } else if breakpoint_hit {
+            Some(Breakpoint)
+        } else {
+            None
         }
     }
 
@@ -483,16 +493,20 @@ impl Cpu {
         self.pc = value;
     }
 
-    pub fn add_breakpoint(&mut self, address: u32) {
+    pub fn get_cycle_counter(&self) -> u64 {
+        self.cycle_counter
+    }
+
+    pub fn add_breakpoint(&mut self, address: Address) {
         self.breakpoints.insert(address);
     }
 
-    pub fn remove_breakpoint(&mut self, address: u32) {
+    pub fn remove_breakpoint(&mut self, address: Address) {
         self.breakpoints.remove(&address);
     }
 
-    pub fn get_cycle_counter(&self) -> u64 {
-        self.cycle_counter
+    fn is_breakpoint(&self, address: Address) -> bool {
+        self.breakpoints.contains(&address)
     }
 }
 

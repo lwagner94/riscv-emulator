@@ -1,198 +1,161 @@
-use gdb_remote_protocol::{
-    process_packets_from, Breakpoint, Error, Handler, MemoryRegion, ProcessType, StopReason,
-    ThreadId, Watchpoint,
-};
-use std::net::TcpListener;
-
-use std::cell::RefCell;
-
-use crate::memory::addressspace::MemoryDevice;
+use crate::memory::addressspace::{Address, MemoryDevice};
 use crate::util;
 use crate::AddressSpace;
 use crate::Cpu;
+use std::net::TcpListener;
 
-const BIND_ADDRESS: &str = "0.0.0.0:3000";
+use crate::cpu::CpuEvent;
+use gdbstub::arch::Arch;
+use gdbstub::target;
+use gdbstub::target::ext::base;
+use gdbstub::target::ext::base::singlethread::{SingleThreadOps, StopReason};
+use gdbstub::target::ext::base::ResumeAction;
+use gdbstub::target::ext::breakpoints::SwBreakpoint;
+use gdbstub::target::{Target, TargetResult};
+use gdbstub::{arch, DisconnectReason, GdbStub, GdbStubError};
 
-struct NoopHandler {
-    cpu: RefCell<Cpu>,
-    memory: RefCell<AddressSpace>,
+struct RISCVTarget {
+    memory: AddressSpace,
+    cpu: Cpu,
 }
 
-impl<'a> Handler for NoopHandler {
-    fn query_supported_features(&self) -> Vec<String> {
-        let v = vec![];
-        v
+impl SingleThreadOps for RISCVTarget {
+    fn resume(
+        &mut self,
+        action: ResumeAction,
+        check_gdb_interrupt: &mut dyn FnMut() -> bool,
+    ) -> Result<StopReason<<Self::Arch as Arch>::Usize>, Self::Error> {
+        let event = match action {
+            ResumeAction::Step => match self.cpu.step(&mut self.memory) {
+                Some(e) => e,
+                None => return Ok(StopReason::DoneStep),
+            },
+            ResumeAction::Continue => {
+                let mut cycles = 0;
+                loop {
+                    if let Some(event) = self.cpu.step(&mut self.memory) {
+                        println!("Breka");
+                        return Ok(StopReason::SwBreak);
+                    };
+
+                    // check for GDB interrupt every 1024 instructions
+                    cycles += 1;
+                    if cycles % 1024 == 0 && check_gdb_interrupt() {
+                        return Ok(StopReason::GdbInterrupt);
+                    }
+                }
+            }
+        };
+
+        Ok(match event {
+            CpuEvent::Halted => StopReason::Halted,
+            CpuEvent::Breakpoint => StopReason::SwBreak,
+        })
     }
 
-    fn attached(&self, _pid: Option<u64>) -> Result<ProcessType, Error> {
-        Ok(ProcessType::Created)
-    }
-    fn detach(&self, _pid: Option<u64>) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-    fn kill(&self, _pid: Option<u64>) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-    fn ping_thread(&self, _id: ThreadId) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
+    fn read_registers(
+        &mut self,
+        regs: &mut <Self::Arch as Arch>::Registers,
+    ) -> TargetResult<(), Self> {
+        regs.pc = self.cpu.get_pc();
 
-    fn read_memory(&self, region: MemoryRegion) -> Result<Vec<u8>, Error> {
-        let memory = self.memory.borrow_mut();
-        let mut memory_content = Vec::with_capacity(region.length as usize);
-        for address in region.address..region.address + region.length {
-            memory_content.push(memory.read_byte(address as u32));
+        for i in 0..32 {
+            regs.x[i] = self.cpu.get_register(i);
         }
 
-        Ok(memory_content)
+        Ok(())
     }
 
-    /// Write the provided bytes to memory at the given address.
-    fn write_memory(&self, _address: u64, _bytes: &[u8]) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-    fn read_register(&self, _register: u64) -> Result<Vec<u8>, Error> {
-        Err(Error::Unimplemented)
-    }
-    fn write_register(&self, _register: u64, _contents: &[u8]) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-    fn read_general_registers(&self) -> Result<Vec<u8>, Error> {
-        let size = std::mem::size_of::<u32>();
+    fn write_registers(
+        &mut self,
+        regs: &<Self::Arch as Arch>::Registers,
+    ) -> TargetResult<(), Self> {
+        self.cpu.set_pc(regs.pc);
 
-        let mut v = vec![0u8; 33 * size];
-        let cpu = self.cpu.borrow();
-
-        for i in 0..=31 {
-            let start_index = i * size;
-            let end_index = start_index + size;
-            util::write_u32_to_byteslice(&mut v[start_index..end_index], cpu.get_register(i));
+        for i in 0..32 {
+            self.cpu.set_register(i, regs.x[i]);
         }
 
-        util::write_u32_to_byteslice(&mut v[32 * size..33 * size], cpu.get_pc());
-        Ok(v)
-    }
-    fn write_general_registers(&self, _contents: &[u8]) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn current_thread(&self) -> Result<Option<ThreadId>, Error> {
-        Ok(None)
-    }
-
-    fn set_current_thread(&self, _id: ThreadId) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn search_memory(
-        &self,
-        _address: u64,
-        _length: u64,
-        _bytes: &[u8],
-    ) -> Result<Option<u64>, Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn halt_reason(&self) -> Result<StopReason, Error> {
-        Ok(StopReason::Signal(5))
-    }
-
-    fn invoke(&self, _data: &[u8]) -> Result<String, Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn set_address_randomization(&self, _enable: bool) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn catch_syscalls(&self, _syscalls: Option<Vec<u64>>) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn set_pass_signals(&self, _signals: Vec<u64>) -> Result<(), Error> {
         Ok(())
     }
 
-    fn set_program_signals(&self, _signals: Vec<u64>) -> Result<(), Error> {
+    fn read_addrs(
+        &mut self,
+        start_addr: <Self::Arch as Arch>::Usize,
+        data: &mut [u8],
+    ) -> TargetResult<(), Self> {
+        for i in 0..data.len() {
+            data[i] = self.memory.read_byte(start_addr + i as Address);
+        }
+
         Ok(())
     }
 
-    fn thread_info(&self, _thread: ThreadId) -> Result<String, Error> {
-        Err(Error::Unimplemented)
-    }
+    fn write_addrs(
+        &mut self,
+        start_addr: <Self::Arch as Arch>::Usize,
+        data: &[u8],
+    ) -> TargetResult<(), Self> {
+        for i in 0..data.len() {
+            self.memory.write_byte(start_addr + i as Address, data[i]);
+        }
 
-    fn insert_software_breakpoint(&self, breakpoint: Breakpoint) -> Result<(), Error> {
-        let mut cpu = self.cpu.borrow_mut();
-        cpu.add_breakpoint(breakpoint.addr as u32);
         Ok(())
     }
+}
 
-    fn insert_hardware_breakpoint(&self, _breakpoint: Breakpoint) -> Result<(), Error> {
-        Err(Error::Unimplemented)
+impl SwBreakpoint for RISCVTarget {
+    fn add_sw_breakpoint(&mut self, addr: u32) -> TargetResult<bool, Self> {
+        self.cpu.add_breakpoint(addr);
+        Ok(true)
     }
 
-    fn insert_write_watchpoint(&self, _watchpoint: Watchpoint) -> Result<(), Error> {
-        Err(Error::Unimplemented)
+    fn remove_sw_breakpoint(&mut self, addr: u32) -> TargetResult<bool, Self> {
+        self.cpu.remove_breakpoint(addr);
+        Ok(true)
+    }
+}
+
+impl Target for RISCVTarget {
+    type Arch = arch::riscv::Riscv32;
+    type Error = &'static str;
+
+    fn base_ops(&mut self) -> base::BaseOps<Self::Arch, Self::Error> {
+        base::BaseOps::SingleThread(self)
     }
 
-    fn insert_read_watchpoint(&self, _watchpoint: Watchpoint) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn insert_access_watchpoint(&self, _watchpoint: Watchpoint) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn remove_software_breakpoint(&self, breakpoint: Breakpoint) -> Result<(), Error> {
-        let mut cpu = self.cpu.borrow_mut();
-        cpu.remove_breakpoint(breakpoint.addr as u32);
-        Ok(())
-    }
-
-    fn remove_hardware_breakpoint(&self, _breakpoint: Breakpoint) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn remove_write_watchpoint(&self, _watchpoint: Watchpoint) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn remove_read_watchpoint(&self, _watchpoint: Watchpoint) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn remove_access_watchpoint(&self, _watchpoint: Watchpoint) -> Result<(), Error> {
-        Err(Error::Unimplemented)
-    }
-
-    fn step(&self) -> Result<StopReason, Error> {
-        let mut cpu = self.cpu.borrow_mut();
-        let mut memory = self.memory.borrow_mut();
-        cpu.step(&mut memory);
-        Ok(StopReason::Signal(5))
-    }
-
-    fn cont(&self) -> Result<StopReason, Error> {
-        let mut cpu = self.cpu.borrow_mut();
-        let mut memory = self.memory.borrow_mut();
-        cpu.cont(&mut memory);
-        Ok(StopReason::Signal(5))
+    fn sw_breakpoint(&mut self) -> Option<target::ext::breakpoints::SwBreakpointOps<Self>> {
+        Some(self)
     }
 }
 
 pub fn start_server(cpu: Cpu, memory: AddressSpace) {
-    //    drop(env_logger::init());
-    let listener = TcpListener::bind(BIND_ADDRESS).unwrap();
-    eprintln!("Listening on {}", BIND_ADDRESS);
-    let res = listener.incoming().next().unwrap();
+    let sockaddr = format!("localhost:{}", 3000);
+    eprintln!("Waiting for a GDB connection on {:?}...", sockaddr);
+    let sock = TcpListener::bind(sockaddr).unwrap();
+    let (stream, addr) = sock.accept().unwrap();
 
-    eprintln!("Got connection");
-    if let Ok(stream) = res {
-        let h = NoopHandler {
-            cpu: RefCell::new(cpu),
-            memory: RefCell::new(memory),
-        };
-        process_packets_from(stream.try_clone().unwrap(), stream, h);
+    eprintln!("Debugger connected from {}", addr);
+
+    let mut target = RISCVTarget { memory, cpu };
+
+    let mut debugger = GdbStub::new(stream);
+
+    match debugger.run(&mut target) {
+        Ok(disconnect_reason) => match disconnect_reason {
+            DisconnectReason::Disconnect => println!("GDB client disconnected."),
+            DisconnectReason::TargetHalted => println!("Target halted!"),
+            DisconnectReason::Kill => println!("GDB client sent a kill command!"),
+        },
+        // Handle any target-specific errors
+        Err(GdbStubError::TargetError(e)) => {
+            println!("Target raised a fatal error: {:?}", e);
+            // e.g: re-enter the debugging session after "freezing" a system to
+            // conduct some post-mortem debugging
+            debugger.run(&mut target).unwrap();
+        }
+        Err(e) => panic!(e.to_string()), //return Err(e.into())
     }
+
     eprintln!("Connection closed");
 }
