@@ -1,10 +1,10 @@
 use crate::instruction::Instruction;
 use crate::instruction::WrappedInstruction;
-use crate::memory::addressspace::{AddressSpace, MemoryDevice, Address};
+use crate::memory::addressspace::{Address, AddressSpace, MemoryDevice};
 use crate::util;
-use std::collections::HashSet;
 use core::cmp::max;
 use core::cmp::min;
+use std::collections::HashSet;
 
 pub struct Cpu {
     registers: [u32; 32],
@@ -374,7 +374,6 @@ impl Cpu {
 
                 let op2 = self.get_register(rs2);
                 memory.write_word(addr, op2);
-
             }
             Instruction::AMOADDW(rd, rs1, rs2) => {
                 let addr = self.get_register(rs1) as Address;
