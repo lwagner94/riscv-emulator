@@ -1,17 +1,11 @@
 use clap::{App, Arg, ArgMatches};
 use std::time::SystemTime;
 
-use crate::cpu::Cpu;
-use crate::memory::addressspace::AddressSpace;
 
-#[cfg(feature = "gdbstub")]
-mod gdbserver;
-mod cpu;
-mod error;
-mod instruction;
-mod loader;
-mod memory;
-mod util;
+use riscv_emu::memory::addressspace::AddressSpace;
+use riscv_emu::{loader, gdbserver};
+use riscv_emu::cpu::Cpu;
+
 
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");

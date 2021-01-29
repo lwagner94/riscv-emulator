@@ -1,9 +1,7 @@
-use crate::memory::addressspace::{Address, MemoryDevice};
-use crate::AddressSpace;
-use crate::Cpu;
+use crate::memory::addressspace::{Address, MemoryDevice, AddressSpace};
 use std::net::TcpListener;
 
-use crate::cpu::CpuEvent;
+use crate::cpu::{CpuEvent, Cpu};
 use gdbstub::arch::Arch;
 use gdbstub::target;
 use gdbstub::target::ext::base;

@@ -144,7 +144,11 @@ impl Video {
     #[cfg(feature = "framebuffer")]
     fn start_render_thread(context: Arc<SharedVideoContext>) {
         let func = move || {
-            let sdl_context = sdl2::init().unwrap();
+            let sdl_context =  match sdl2::init() {
+                Ok(ctx) => ctx,
+                Err(err) => return
+            };
+
             let video_subsystem = sdl_context.video().unwrap();
 
             let window = video_subsystem

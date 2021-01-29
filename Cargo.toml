@@ -7,6 +7,14 @@ description = "riscv-emu is an emulator for the riscv32imac architecture"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "riscv_emu"
+path = "src/lib.rs"
+
+[[bin]]
+name = "emulator"
+path = "src/main.rs"
+
 [dependencies]
 clap = "2.33.0"
 goblin = "0.3.1"

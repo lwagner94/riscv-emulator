@@ -26,7 +26,6 @@ pub fn load_program(path: &str, memory: &mut AddressSpace) -> EmulatorResult<()>
                 .filter(|phdr| phdr.p_type == PT_LOAD)
             {
                 let x = &buffer[loadable_phdr.file_range()];
-                println!("{:?}", x);
 
                 for (index, &byte) in x.iter().enumerate() {
                     memory.write_byte((index + loadable_phdr.p_vaddr as usize) as Address, byte);
