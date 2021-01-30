@@ -1,17 +1,9 @@
 use clap::{App, Arg, ArgMatches};
 use std::time::SystemTime;
 
-use crate::cpu::Cpu;
-use crate::memory::addressspace::AddressSpace;
-
-#[cfg(feature = "gdbstub")]
-mod gdbserver;
-mod cpu;
-mod error;
-mod instruction;
-mod loader;
-mod memory;
-mod util;
+use riscv_emu::cpu::Cpu;
+use riscv_emu::loader;
+use riscv_emu::memory::addressspace::AddressSpace;
 
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -35,8 +27,10 @@ fn main() {
 
     if args.debug_enabled {
         #[cfg(feature = "gdbstub")]
-        gdbserver::start_server(cpu, memory);
-
+        {
+            use riscv_emu::gdbserver;
+            gdbserver::start_server(cpu, memory);
+        }
     } else {
         let before = SystemTime::now();
         cpu.run(&mut memory);

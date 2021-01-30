@@ -2,7 +2,7 @@ use super::ram::Ram;
 use super::video::Video;
 use crate::memory::debug::Debug;
 use std::borrow::Borrow;
-use std::sync::atomic::{AtomicU32};
+use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 
 pub type Address = u32;
@@ -68,6 +68,12 @@ impl AddressSpace {
     fn calculate_device_index(&self, address: Address) -> usize {
         let index = (address >> 20) as usize;
         self.address_lut[index] as usize
+    }
+}
+
+impl Default for AddressSpace {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -1,7 +1,6 @@
 test.o
 test.S
 *.bin
-*.elf
 *.list
 *.o
 *.a
