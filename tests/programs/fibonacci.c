@@ -4,11 +4,21 @@
 #include "common/common.h"
 
 uint32_t fib(uint32_t n) {
-    if (n == 1 || n == 2) {
+    if (n < 3) {
         return 1;
     }
 
-    return fib(n - 1) + fib(n - 2);
+    uint32_t t1 = 1;
+    uint32_t t2 = 1;
+    uint32_t next = 0;
+
+    for (uint32_t i = 1; i <= n; i++) {
+        t1 = t2;
+        t2 = next;
+        next = t1 + t2;
+    }
+
+    return next;
 }
 
 int main(void) {
