@@ -4,12 +4,23 @@ pub fn read_u16_from_byteslice(slice: &[u8]) -> u16 {
     u16::from(slice[0]) | u16::from(slice[1]) << 8
 }
 
+// #[inline(always)]
 pub fn read_u32_from_byteslice(slice: &[u8]) -> u32 {
     u32::from(slice[0])
         | u32::from(slice[1]) << 8
         | u32::from(slice[2]) << 16
         | u32::from(slice[3]) << 24
 }
+
+#[inline(always)]
+pub fn read_u32_from_byteslice_fast(slice: &[u8]) -> u32 {
+    let result = unsafe {
+         *std::mem::transmute::<*const u8, *const u32>(slice.as_ptr())
+    };
+
+    result
+}
+
 
 pub fn write_u16_to_byteslice(slice: &mut [u8], value: u16) {
     slice[0] = value as u8;
@@ -45,6 +56,21 @@ mod test {
         let result = read_u32_from_byteslice(&buffer);
         assert_eq!(0xDDCCBBAA, result);
     }
+
+    #[test]
+    fn test_read_u32_from_byteslice_fast() {
+        let buffer: [u8; 4] = [0xAA, 0xBB, 0xCC, 0xDD];
+        let result = read_u32_from_byteslice_fast(&buffer);
+        assert_eq!(0xDDCCBBAA, result);
+    }
+
+    #[test]
+    fn test_read_u32_from_byteslice_fast2() {
+        let buffer: [u8; 8] = [0xAA, 0xBB, 0xCC, 0xDD, 0x00, 0x11, 0x22, 0x33];
+        let result = read_u32_from_byteslice_fast(&buffer[4..8]);
+        assert_eq!(0x33221100, result);
+    }
+
 
     #[test]
     fn test_write_u16_to_byteslice() {

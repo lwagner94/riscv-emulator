@@ -22,6 +22,9 @@ thiserror = "1.0.23"
 sdl2 = {version = "0.34.3", optional=true}
 gdbstub = {version = "0.4.3", optional=true}
 
+[dev-dependencies]
+criterion = "0.3.4"
+
 [profile.release]
 #lto = true
 
@@ -30,3 +33,6 @@ default = ["framebuffer", "debugger"]
 framebuffer = ["sdl2"]
 debugger = ["gdbstub"]
 
+[[bench]]
+name = "benchmark"
+harness = false
