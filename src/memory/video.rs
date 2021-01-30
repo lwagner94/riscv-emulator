@@ -2,20 +2,8 @@ use super::addressspace::Address;
 use super::addressspace::MemoryDevice;
 use crate::util;
 
-#[cfg(feature = "framebuffer")]
-use sdl2::event::Event;
-
-#[cfg(feature = "framebuffer")]
-use sdl2::pixels::PixelFormatEnum;
-
-#[cfg(feature = "framebuffer")]
-use sdl2::rect::Rect;
-
-#[cfg(feature = "framebuffer")]
-use sdl2::render::Texture;
-
 use std::cell::UnsafeCell;
-use std::sync::atomic::{AtomicU32};
+use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 
 const SIZE_X: u32 = 800;
@@ -138,15 +126,20 @@ impl Video {
         }
     }
 
-    #[cfg(not(feature = "framebuffer"))]
+    #[cfg(any(test, not(feature = "framebuffer")))]
     fn start_render_thread(_: Arc<SharedVideoContext>) {}
 
-    #[cfg(feature = "framebuffer")]
+    #[cfg(all(feature = "framebuffer", not(test)))]
     fn start_render_thread(context: Arc<SharedVideoContext>) {
+        use sdl2::event::Event;
+        use sdl2::pixels::PixelFormatEnum;
+        use sdl2::rect::Rect;
+        use sdl2::render::Texture;
+
         let func = move || {
-            let sdl_context =  match sdl2::init() {
+            let sdl_context = match sdl2::init() {
                 Ok(ctx) => ctx,
-                Err(err) => return
+                Err(_) => return,
             };
 
             let video_subsystem = sdl_context.video().unwrap();
@@ -202,7 +195,11 @@ impl Video {
 
                         unsafe {
                             let framebuffer_vec = &*context.get_framebuffer();
-                            std::ptr::copy_nonoverlapping(framebuffer_vec.as_ptr(), dest_ptr, VEC_SIZE);
+                            std::ptr::copy_nonoverlapping(
+                                framebuffer_vec.as_ptr(),
+                                dest_ptr,
+                                VEC_SIZE,
+                            );
                         }
                     })
                     .unwrap();

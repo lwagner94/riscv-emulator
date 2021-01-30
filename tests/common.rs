@@ -1,6 +1,6 @@
-use riscv_emu::memory::addressspace::{Address, AddressSpace, MemoryDevice};
 use riscv_emu::cpu::Cpu;
 use riscv_emu::loader;
+use riscv_emu::memory::addressspace::{Address, AddressSpace, MemoryDevice};
 
 // TODO: Extract constants!
 const DEBUG_BASE: Address = 0x20000000;
@@ -12,13 +12,12 @@ const DEBUG_BASE_INPUT: Address = DEBUG_BASE_INPUT_LENGTH + 4;
 
 pub struct TestRun {
     memory: AddressSpace,
-    write_address: Address
+    write_address: Address,
 }
 
 pub struct TestRunResult {
     memory: AddressSpace,
-    cpu: Cpu,
-    read_address: Address
+    read_address: Address,
 }
 
 impl TestRun {
@@ -28,7 +27,7 @@ impl TestRun {
 
         Self {
             memory,
-            write_address: DEBUG_BASE_INPUT
+            write_address: DEBUG_BASE_INPUT,
         }
     }
 
@@ -50,7 +49,7 @@ impl TestRun {
         self
     }
 
-    pub fn write_string(mut self, s: &str) -> Self {
+    pub fn write_string(self, s: &str) -> Self {
         let mut ret = self;
 
         for character in s.chars() {
@@ -63,14 +62,16 @@ impl TestRun {
     }
 
     pub fn run(mut self) -> TestRunResult {
-        self.memory.write_word(DEBUG_BASE_INPUT_LENGTH, self.write_address - DEBUG_BASE_INPUT);
+        self.memory.write_word(
+            DEBUG_BASE_INPUT_LENGTH,
+            self.write_address - DEBUG_BASE_INPUT,
+        );
         let mut cpu = Cpu::new();
         cpu.run(&mut self.memory);
 
         TestRunResult {
             memory: self.memory,
-            cpu,
-            read_address: DEBUG_BASE_OUTPUT
+            read_address: DEBUG_BASE_OUTPUT,
         }
     }
 }
@@ -97,7 +98,8 @@ impl TestRunResult {
     pub fn read_string(&mut self) -> String {
         let mut s = String::new();
 
-        while let c = self.read_byte() {
+        loop {
+            let c = self.read_byte();
             if c == 0 {
                 break;
             }
