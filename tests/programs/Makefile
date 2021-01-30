@@ -11,7 +11,7 @@ ELF_FILES = $(patsubst %.c, %.elf, $(FILES))
 
 %.elf : %.c common/common.c common/common.h common/link.x Makefile
 	$(RISCVGNU)-gcc $(CFLAGS) $(LDFLAGS) common/startup.s common/common.c $< -o $@
-	$(RISCVGNU)-objdump -D $@ > $@.list
+	#$(RISCVGNU)-objdump -D $@ > $@.list
 
 all: $(ELF_FILES)
 #

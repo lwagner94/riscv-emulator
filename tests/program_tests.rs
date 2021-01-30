@@ -18,3 +18,12 @@ fn test_parameters() {
     assert_eq!(res.read_halfword(), 0xBECA);
     assert_eq!(res.read_word(), 0xCAFECAFE);
 }
+
+#[test]
+fn test_fibonacci() {
+    let mut t = TestRun::new("tests/programs/fibonacci.elf");
+    t.write_byte(33);
+    let mut res = t.run();
+
+    assert_eq!(res.read_word(), 3524578);
+}
