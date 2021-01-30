@@ -6,12 +6,12 @@ use common::TestRun;
 
 #[test]
 fn test_parameters() {
-    let mut res = TestRun::new("tests/programs/parameters.elf")
-        .write_byte(0xFA)
-        .write_string("foobar")
-        .write_halfword(0xBECA)
-        .write_word(0xCAFECAFE)
-        .run();
+    let mut t = TestRun::new("tests/programs/parameters.elf");
+    t.write_byte(0xFA);
+    t.write_string("foobar");
+    t.write_halfword(0xBECA);
+    t.write_word(0xCAFECAFE);
+    let mut res = t.run();
 
     assert_eq!(res.read_byte(), 0xFA);
     assert_eq!(res.read_string(), "foobar");

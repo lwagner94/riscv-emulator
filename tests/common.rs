@@ -31,34 +31,34 @@ impl TestRun {
         }
     }
 
-    pub fn write_byte(mut self, value: u8) -> Self {
+    pub fn write_byte(&mut self, value: u8) -> &mut Self {
         self.memory.write_byte(self.write_address, value);
         self.write_address += 1;
         self
     }
 
-    pub fn write_halfword(mut self, value: u16) -> Self {
+    pub fn write_halfword(&mut self, value: u16) -> &mut Self {
         self.memory.write_halfword(self.write_address, value);
         self.write_address += 2;
         self
     }
 
-    pub fn write_word(mut self, value: u32) -> Self {
+    pub fn write_word(&mut self, value: u32) -> &mut Self {
         self.memory.write_word(self.write_address, value);
         self.write_address += 4;
         self
     }
 
-    pub fn write_string(self, s: &str) -> Self {
-        let mut ret = self;
+    pub fn write_string(&mut self, s: &str) -> &mut Self {
+        // let mut ret = self;
 
         for character in s.chars() {
-            ret = ret.write_byte(character as u8);
+            self.write_byte(character as u8);
         }
 
-        ret = ret.write_byte(0u8);
+        self.write_byte(0u8);
 
-        ret
+        self
     }
 
     pub fn run(mut self) -> TestRunResult {
